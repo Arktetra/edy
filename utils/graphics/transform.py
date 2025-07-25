@@ -44,7 +44,7 @@ def scaling_rotation(s: torch.Tensor, q: torch.Tensor) -> torch.Tensor:
     -----
         (torch.Tensor): NX4X3 tensor representing the scaling rotation matrix of N points.
     """
-    S = torch.zeros([s.shape, 3, 3], dtype=torch.float, device=s.device)
+    S = torch.zeros([s.shape[0], 3, 3], dtype=torch.float, device=s.device)
     S[:, 0, 0] = s[:, 0]
     S[:, 1, 1] = s[:, 1]
     S[:, 2, 2] = s[:, 2]
