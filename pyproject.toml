@@ -2,7 +2,9 @@
 name = "edy"
 version = "0.1.0"
 dependencies = [
-
+    "opencv-python",
+    "numpy",
+    "matplotlib",
 ]
 
 [project.urls]
