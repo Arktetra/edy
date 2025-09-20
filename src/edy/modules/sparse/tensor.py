@@ -387,4 +387,23 @@ class SparseTensor:
             return cur_scale_cache
         return cur_scale_cache.get(key, None)
 
+def sparse_batch_broadcast(
+    inp: SparseTensor, other: torch.Tensor
+) -> torch.Tensor:
+    raise NotIMplementedError("Implement Me!")
+
+def sparse_batch_op(
+    inp: SparseTensor, other: torch.Tensor, op: Callable = torch.add
+) -> SparseTensor:
+    raise NotImplementedError("Implement Me!")
+
+def sparse_cat(
+    inp: List[SparseTensor], dim: int = 0
+) -> SparseTensor:
+    raise NotImplementedError("Implement me!")
+
+def sparse_unbind(
+    inp: SparseTensor, dim: int
+) -> List[SparseTensor]:
+    raise NotImplementedError("Implement Me!")
 
