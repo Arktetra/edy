@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from . import SparseTensor
+from edy.modules.sparse.tensor import SparseTensor
 
 class SparseReLU(nn.ReLU):
     def forward(self, x: SparseTensor) -> SparseTensor:
