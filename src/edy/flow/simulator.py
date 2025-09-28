@@ -7,7 +7,7 @@ from edy.flow.de import ODE
 
 class Simulator(ABC):
     @abstractmethod
-    def step(self, xt: torch.Tensor, t: torch.Tensor, dt: torch.Tensor, **kwargs):
+    def step(self, xt: torch.Tensor, t: torch.Tensor, dt: torch.Tensor, **kwargs) -> torch.Tensor:
         pass
 
     @torch.no_grad()
