@@ -40,3 +40,17 @@ class Beta(ABC):
             t = t.unsqueeze(1)
             dt = vmap(jacrev(self))(t)
             return dt.view(-1, 1, 1, 1)
+
+class LinearAlpha(Alpha):
+    def __call__(self, t: torch.Tensor) -> torch.Tensor:
+        return t
+
+    def dt(self, t: torch.Tensor) -> torch.Tensor:
+        return torch.ones_like(t)
+
+class LinarBeta(Beta):
+    def __call__(self, t: torch.Tensor) -> torch.Tensor:
+        return 1 - t
+
+    def dt(self, t: torch.Tensor) -> torch.Tensor:
+        return - torch.ones_like(t)
