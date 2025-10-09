@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 
 import torch
 import torch.nn as nn
@@ -8,6 +8,16 @@ class Sampleable(ABC):
     @abstractmethod
     def sample(self, num_samples: int) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         pass
+
+class IsotropicGaussian(nn.Module, Sampleable):
+    def __init__(self, shape: List[int], std: float = 1.0):
+        super().__init__()
+        self.shape = shape
+        self.std = std
+        self.dummy = nn.Buffer(torch.zeros(1))
+
+    def sample(self, num_samples) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+        return self.std * torch.randn(num_samples, *self.shape).to(self.dummy.device), None
 
 class ConditionalProbabilityPath(nn.Module, ABC):
     def __init__(self, p_simple: Sampleable, p_data: Sampleable):
