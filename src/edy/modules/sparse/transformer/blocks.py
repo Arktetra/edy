@@ -18,8 +18,8 @@ class SparseFFN(nn.Module):
     def forward(self, x: SparseTensor) -> SparseTensor:
         raise NotImplementedError("Implement Me!")
 
-class ModulatedTransformerBlock(nn.Module):
-    """Modulated Sparse Transformer Block"""
+class ModulatedTransformerCrossBlock(nn.Module):
+    """Modulated Sparse Transformer Cross-Attention Block"""
     def __init__(
         self,
         channels: int,
