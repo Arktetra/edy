@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from torch.utils.checkpoint import checkpoint
 
 from edy.modules.transformer.blocks import ModulatedTransformerBlock
+from edy.modules.transformer.modulated import ModulatedTransformerCrossBlock
 
 def activate_pose(pred_pose_enc, trans_act="linear", quat_act="linear", s_act="linear"):
     t = pred_pose_enc[..., :3]
@@ -42,8 +43,9 @@ class PositionHead(nn.Module):
         self,
         model_channels: int,
         trunk_depth: int = 4,
+        pose_encoding_type: str = "absT_quatR_S",
         num_heads: int = 16,
-        mlp_ratio: int = 4,
+        mlp_ratio: float = 4.0,
         trans_act: str = "linear",
         quat_act: str = "linear",
         s_act: str = "relu",
@@ -52,7 +54,13 @@ class PositionHead(nn.Module):
     ):
         super(PositionHead, self).__init__()
         
-        self.target_dim = 8
+        if pose_encoding_type == "absT_quatR_S":
+            self.target_dim = 8
+        elif pose_encoding_type == "absT_eulerR_S":
+            self.target_dim = 7
+        else:
+            raise NotImplementedError(f"Pose encoding type {pose_encoding_type} not implemented")
+
         self.trans_act = trans_act
         self.quat_act = quat_act
         self.s_act = s_act
