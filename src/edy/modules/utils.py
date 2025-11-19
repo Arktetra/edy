@@ -9,9 +9,9 @@ FP16_MODULES = (
     nn.ConvTranspose2d,
     nn.ConvTranspose3d,
     nn.Linear,
-    sp.SparseConv3d,
-    sp.SparseInverseConv3d,
-    sp.SparseLinear,
+    # sp.SparseConv3d,
+    # sp.SparseInverseConv3d,
+    # sp.SparseLinear,
 )
 
 def convert_module_to_f16(l):

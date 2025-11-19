@@ -1,5 +1,5 @@
 
-from typing import Literal, Optional, Union
+from typing import Literal, Optional, Tuple, Union
 from torch import nn
 import torch
 
@@ -40,9 +40,7 @@ class MultiHeadAttention(nn.Module):
         type: Literal["self", "cross"] = "self",
         attn_mode: Literal["full", "serialized", "windowed"] ="full",
         window_size: Optional[int] = None,
-        shift_sequence: Optional[int] = None,
         shift_window: Optional[Tuple[int, int, int]] = None,
-        serialize_mode: Optional[SerializeMode] = None,
         qkv_bias: bool = True,
         use_rope: bool = False,
         qk_rms_norm: bool = False

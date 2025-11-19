@@ -7,8 +7,7 @@ import torch.nn.functional as F
 
 from torch.utils.checkpoint import checkpoint
 
-from edy.modules.transformer.blocks import ModulatedTransformerBlock
-from edy.modules.transformer.modulated import ModulatedTransformerCrossBlock
+from edy.modules.transformer.modulated import ModulatedTransformerBlock, ModulatedTransformerCrossBlock
 
 def activate_pose(pred_pose_enc, trans_act="linear", quat_act="linear", s_act="linear"):
     t = pred_pose_enc[..., :3]

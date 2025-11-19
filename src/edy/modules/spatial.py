@@ -2,8 +2,8 @@ import torch
 
 from jaxtyping import Float
 
-def shuffle_pixel_3d(
-    x: Float[torch.Tensor, "B C H W D"],
+def pixel_shuffle_3d(
+    x: Float[torch.Tensor, "B C D H W"],
     scale_factor: int
 ) -> Float[torch.Tensor, "B C H W D"]:
     """
@@ -22,7 +22,7 @@ def shuffle_pixel_3d(
 def patchify(
     x: Float[torch.Tensor, "B C D H W"],
     p: int  # patch size
-) -> Float[torch.Tensor, "B, C*(p**3), D//p, H//p, W//p"]:
+) -> Float[torch.Tensor, "B C*(p**3) D//p H//p W//p"]:
     """
     Split a tensor into non-overlapping patches, by subdividing each spatial dimension into blocks of size `p`, and then re-encoding those patches into the channel dimension.
 
@@ -43,7 +43,7 @@ def patchify(
 def unpatchify(
     x: Float[torch.Tensor, "B C D H W"],
     p: int,
-) -> Float[torch.Tensor, "B, C//(p**3), D*p, H*p, W*p"]:
+) -> Float[torch.Tensor, "B C//(p**3) D*p H*p W*p"]:
     """
     Reverse the patchification process by rearranging the patch dimensions back into spatial dimensions.
 
