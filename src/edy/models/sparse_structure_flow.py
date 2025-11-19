@@ -1,3 +1,4 @@
+from typing import Literal, Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -6,8 +7,9 @@ from jaxtyping import Int, Float
 
 from edy.modules.position_head import PositionHead
 from edy.modules.spatial import patchify, unpatchify
-from edy.modules.transformer.modulated import ModulatedTransformerCrossBlock
+from edy.modules.transformer.modulated import AbsolutePositionEmbedder, ModulatedTransformerCrossBlock
 from edy.modules.utils import convert_module_to_f16, convert_module_to_f32
+
 
 class BatchEncoder(nn.Module):
     """
@@ -184,7 +186,7 @@ class FlowTransformer(nn.Module):
 
         if use_fp16:
             self.convert_to_fp16()
-        
+
     @property
     def device(self) -> torch.device:
         """
@@ -197,7 +199,7 @@ class FlowTransformer(nn.Module):
         Convert the torso of the model to float16.
         """
         self.blocks.apply(convert_module_to_f16)
-        
+
         self.position_head.trunk.apply(convert_module_to_f16)
 
     def convert_to_fp32(self) -> None:
@@ -235,7 +237,7 @@ class FlowTransformer(nn.Module):
 
     def forward(self, x: torch.Tensor, t: torch.Tensor, cond: torch.Tensor):
         assert [*x.shape] == [x.shape[0], self.in_channels, *[self.resolution] * 3], \
-            f"Input shape mismatch, got {x.shape}, expected {[x.shape[0], self.in_channels, *[self.resolution] * 3]}"
+        f"Input shape mismatch, got {x.shape}, expected {[x.shape[0], self.in_channels, *[self.resolution] * 3]}"
 
         h = patchify(x, self.patch_size)
         h = h.view(*h.shape[:2], -1).permite(0, 2, 1).contiguous()
@@ -258,10 +260,10 @@ class FlowTransformer(nn.Module):
         cond = cond.type(self.dtype)
 
         for block in self.blocks:
-                h = block(h, t_emb, cond)
+            h = block(h, t_emb, cond)
 
         h = h.type(x.dtype)
-        
+
         position_token = h[:, :1, :]
         h = h[:, self.num_register_tokens + 1:, :]
 
