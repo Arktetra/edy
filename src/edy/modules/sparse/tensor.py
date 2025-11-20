@@ -5,7 +5,8 @@ import torch.nn as nn
 from typing import Callable, Optional, List, Union, overload
 
 
-SparseTensorData = None
+SparseTensorData = spconv.SparseConvTensor
+Scalar = int | float
 
 class SparseTensor:
     @overload
@@ -28,9 +29,6 @@ class SparseTensor:
     ): ...
 
     def __init__(self, *args, **kwargs):
-        global SparseTensorData
-        SparseTensorData = spconv.SparseConvTensor
-
         method_id = 0
         if len(args) != 0:
             method_id = 0 if isinstance(args[0], torch.Tensor) else 1
@@ -217,6 +215,16 @@ class SparseTensor:
         return sparse_unbind(self, dim)
 
     def replace(self, feats: torch.Tensor, coords: Optional[torch.Tensor] = None) -> 'SparseTensor':
+        """
+        Replaces the current `feats` and `coords` of the `SparseTensor` with the supplied ones.
+
+        Args:
+            feats (torch.Tensor): the feature values.
+            coords (Optional[torch.Tensor]): the coordinates where the features occur.
+
+        Returns:
+            SparseTensor with the replaced `feats` and `coords`.
+        """
         new_shape = [self.shape[0]]
         new_shape.extend(feats.shape[1:])
 
@@ -242,11 +250,30 @@ class SparseTensor:
         return new_tensor
 
     @staticmethod
-    def full(aabb, dim, value, dtype=torch.float32, device=None) -> 'SparseTensor':
+    def full(
+        aabb, 
+        dim,
+        value: Scalar,
+        dtype: torch.dtype = torch.float32, 
+        device: Optional[str]=None
+    ) -> 'SparseTensor':
+        """
+        Creates a tensor of size `[N x W x H x D, C]` filled with `value`.
+
+        Args:
+            aabb (torch.Tensor): an axis-aligned bounding box with width `W`, height `H`, and depth `D`.
+            dim (Tuple[int, int]): a tuple of batch-size `N` and channel dimension `C`.
+            value (Scalar): the value with which the output tensor is filled.
+            dtype (torch.dtype): the desired data type of returned tensor. Defaults to `torch.float32`.
+            device (Optional[str]): the desired device of returned tensor. Defaults to `None`.
+
+        Returns:
+            SparseTensor of size [N x W x H x D, C].
+        """
         N, C = dim
-        x = torch.arange(aabb[0], aabb[3] + 1)
-        y = torch.arange(aabb[1], aabb[4] + 1)
-        z = torch.arange(aabb[2], aabb[5] + 1)
+        x = torch.arange(aabb[0], aabb[3] + 1)  # x_min, x_max
+        y = torch.arange(aabb[1], aabb[4] + 1)  # y_min, y_max
+        z = torch.arange(aabb[2], aabb[5] + 1)  # z_min, z_max
         coords = torch.stack(torch.meshgrid(x, y, z, indexing='ij'), dim=-1).reshape(-1, 3)
         coords = torch.cat([
             torch.arange(N).view(-1, 1).repeat(1, coords.shape[0]).view(-1, 1),
@@ -270,7 +297,7 @@ class SparseTensor:
     def __neg__(self) -> 'SparseTensor':
         return self.replace(-self.feats)
 
-    def __elemwise__(self, other: Union[torch.Tensor, 'SparseTensor'], op: callable) -> 'SparseTensor':
+    def __elemwise__(self, other: Union[torch.Tensor, 'SparseTensor'], op: Callable) -> 'SparseTensor':
         if isinstance(other, torch.Tensor):
             try:
                 other = torch.broadcast_to(other, self.shape)
