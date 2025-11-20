@@ -7,5 +7,5 @@ Generalizable object aware 3D scene reconstruction from a single image.
 For setup, run the following from the project root directory:
 
 ```bash
-pip install -e .[dev]
+pip install -e .
 ```
