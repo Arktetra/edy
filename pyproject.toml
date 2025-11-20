@@ -6,6 +6,7 @@ dependencies = [
     "numpy",
     "matplotlib",
     "torch",
+    "spconv"
 ]
 
 [project.urls]
@@ -15,10 +16,16 @@ Repository = "https://github.com/Arktetra/edy.git"
 name = "pytorch-cuda"
 url = "https://download.pytorch.org/whl/cu130"
 default = true
+explicit = true
 
 [[tool.uv.index]]
 name = "tsinghua"
 url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cuda" }
+]
 
 [build-system]
 requires = ["setuptools"]
