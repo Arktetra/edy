@@ -6,7 +6,8 @@ dependencies = [
     "numpy",
     "matplotlib",
     "torch",
-    "spconv"
+    "spconv",
+    "jaxtyping>=0.3.3",
 ]
 
 [project.urls]
