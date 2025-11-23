@@ -8,6 +8,8 @@ dependencies = [
     "torch",
     "spconv",
     "jaxtyping>=0.3.3",
+    "tqdm",
+    "pandas"
 ]
 
 [project.urls]
