@@ -9,7 +9,11 @@ dependencies = [
     "spconv",
     "jaxtyping>=0.3.3",
     "tqdm",
-    "pandas"
+    "pandas",
+    "dotenv>=0.9.9",
+    "huggingface-hub[cli]>=1.1.5",
+    "hf-transfer>=0.1.9",
+    "triton>=3.5.1",
 ]
 
 [project.urls]
