@@ -6,3 +6,13 @@
 **/*.lock
 **/*.env
 **/*notebooks
+
+.vscode
+.DS_Store
+
+# ignore docs files
+html
+latex
+docs
+site
+Doxyfile
