@@ -41,3 +41,45 @@ python -m dataset_toolkits.datasets.3D_FRONT --extract
 
 > [!NOTE]
 > Only the partaa of the dataset is downloaded.
+
+<hr />
+
+### For doxygen documentation
+- Verify the [doxygen](https://www.doxygen.nl/) installation on device
+```bash
+doxygen --version
+```
+
+> [!NOTE]
+> For doxygen installation guide check [here](https://www.doxygen.nl/manual/install.html). If you are on mac with brew installed, simply run `brew install doxygen`
+
+- Generate the Doxygen config file as:
+```bash
+doxygen -g config_file # config_file (optional), deafults to Doxyfile
+```
+
+- Run the config file (with all field adjusted as per required):
+```bash
+doxygen config_file 
+```
+
+> [!WARNING]
+> Change the input (source) path to the all the source files/folders & expanding the folder option using recursive before running the config file. **Refer note below for more info**
+
+> [!NOTE]
+> Change the `INPUT`, `RECURSIVE`, `EXTRACT_ALL`, etc fields appropiately in your `config_file`. example:
+> ```bash
+> # inside the config_file
+> INPUT = dataset_toolkits/ scene/ scripts/ src/ tests/ utils/
+> 
+> RECURSIVE = YES
+> 
+> EXTRACT_ALL = YES
+> # so on, as per required
+>```
+
+
+After `config_file` run it will generate the `latex/` & `html/` folder with required content (docs). For html part either use `live server` (VSCode extension) or use python packages (http) as:
+```bash
+python -m http.server 8000 
+```
