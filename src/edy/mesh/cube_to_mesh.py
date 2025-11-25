@@ -80,7 +80,7 @@ class SparseFeaturesToMesh:
         self.use_color = use_color
         self._calc_layout()
 
-     def _calc_layout(self):
+    def _calc_layout(self):
         LAYOUTS = {
             'sdf': {'shape': (8, 1), 'size': 8},
             'deform': {'shape': (8, 3), 'size': 8 * 3},
