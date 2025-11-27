@@ -1,6 +1,7 @@
 import argparse
+import shutil
+import subprocess
 from pathlib import Path
-import tarfile
 from ..utils import load_env_variables
 
 import os
@@ -15,22 +16,56 @@ import huggingface_hub
 
 CURRENT_DIR = Path(__file__).resolve()
 ROOT = CURRENT_DIR.parent.parent.parent
-RAW_DATA_DIR = ROOT / "data" / "raw" / "3D-FRONT"
+RAW_DATA_DIR = ROOT / "data" / "raw"
+FILENAME = "3D-FRONT-TEST-SCENE.tar.gz"
 
-def download():
+def download(output_dir):
     load_env_variables()
     huggingface_hub.login(token=os.environ["HF_TOKEN"])
     huggingface_hub.hf_hub_download(
         repo_id="huanngzh/3D-FRONT",
         repo_type="dataset",
-        filename="3D-FRONT-SCENE.partaa",
-        local_dir=RAW_DATA_DIR,
+        filename=FILENAME,
+        local_dir=output_dir,
         
     )
 
-def extract():
-    with tarfile.open(RAW_DATA_DIR / "3D-FRONT-SCENE.partaa") as f:
-        f.extractall(RAW_DATA_DIR)
+def extract(output_dir):
+    print(f"Extracting {FILENAME} to {output_dir}")
+    try:
+        subprocess.run(f"tar -xzvf {output_dir / FILENAME} -C {output_dir}", shell=True, check=True)
+        print("Extraction successful.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error during file extraction: {e}")
+        exit()
+
+def clean(output_dir: Path):
+    """
+    Cleans the unnecessary glb models from the dataset.
+    """
+    print(f"Cleaning unnecessary glb files from the given output dir.")
+    required_glb_files = []
+    try:
+        for sub_dir in output_dir.iterdir():
+            for x in Path(sub_dir).iterdir():
+                if x.name.endswith("full.glb"):
+                    required_glb_files.append(x)
+                else:
+                    if x.is_dir():
+                        shutil.rmtree(x)
+                    else:
+                        x.unlink()
+
+        for i, file in enumerate(required_glb_files):
+            file.rename(output_dir / f"{i}.glb")
+
+        for item in output_dir.iterdir():
+            if Path(item).is_dir():
+                item.rmdir()
+    except NotADirectoryError:
+        print("No sub-directories present to process.")
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -39,12 +74,16 @@ if __name__ == "__main__":
     )
     parser.add_argument("--download", action="store_true")
     parser.add_argument("--extract", action="store_true")
+    parser.add_argument("--clean", action="store_true")
+    parser.add_argument("--output-dir", type=str, default="3D-FRONT")
 
     args = parser.parse_args()
-    
-    if not (args.download or args.extract):
+
+    if not (args.download or args.extract or args.clean):
         raise ValueError("Either --download or --extract flag must be set.")
     if args.download:
-        download()
+        download(output_dir=RAW_DATA_DIR / args.output_dir)
     if args.extract:
-        extract()
+        extract(output_dir=RAW_DATA_DIR / args.output_dir)
+    if args.clean:
+        clean(output_dir=RAW_DATA_DIR / args.output_dir)
