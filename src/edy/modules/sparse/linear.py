@@ -12,4 +12,4 @@ class SparseLinear(nn.Linear):
     def forward(
         self, x: SparseTensor
     ) -> SparseTensor:
-        raise NotImplementerError("Implement Me!")
+        raise NotImplementedError("Implement Me!")

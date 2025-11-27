@@ -80,7 +80,7 @@ class SparseFeaturesToMesh:
         self.use_color = use_color
         self._calc_layout()
 
-     def _calc_layout(self):
+    def _calc_layout(self):
         LAYOUTS = {
             'sdf': {'shape': (8, 1), 'size': 8},
             'deform': {'shape': (8, 3), 'size': 8 * 3},
@@ -142,6 +142,6 @@ class SparseFeaturesToMesh:
                 reg_loss += L_dev.mean() * 0.5
             reg_loss += (weights[:,:20]).abs().mean() * 0.2
             mesh.reg_loss = reg_loss
-            mesh.tsdf_v = get_defomed_verts(v_pos, v_attrs[:, 1:4], self.res)
+            mesh.tsdf_v = get_deformed_verts(v_pos, v_attrs[:, 1:4], self.res)
             mesh.tsdf_s = v_attrs[:, 0]
         return mesh

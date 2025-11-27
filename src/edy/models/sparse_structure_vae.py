@@ -57,7 +57,7 @@ class DownsampleBlock3d(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.conv(x)
 
-class UpsampleBlock3d(nn.Module):
+class UpSampleBlock3d(nn.Module):
     def __init__(
         self,
         in_channels: int,
@@ -120,7 +120,7 @@ class SparseStructureEncoder(nn.Module):
 
         for i, channel in enumerate(channels):
             self.blocks.extend([
-                ResBlock3d(channel, channel),
+                ResBlock3d(channel, channel)
                 for _ in range(num_res_blocks)
             ])
             if i < len(channels) - 1:
