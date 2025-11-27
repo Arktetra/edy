@@ -41,7 +41,7 @@ python -m dataset_toolkits.datasets.3D_FRONT --extract
 
 If you go the directory of the dataset, then you will encoded directory names with structure as shown in the example below:
 ```
-/3D-FRONT/3D-FRONT-TEST-SCENE
+.../3D-FRONT/3D-FRONT-TEST-SCENE/
 |--f7cf5008-957f-4286-8854-20f34f2a8ce3/
 |  |--MasterBedroom-11613/
 |  |--MasterBedroom-11613.glb
