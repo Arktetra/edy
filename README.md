@@ -48,10 +48,20 @@ If you go the directory of the dataset, then you will encoded directory names wi
 |  |--MasterBedroom-11613_full.glb
 ...
 ```
-The `*_full.glb` files under these directories contain all the necessary information required in this project, so we can remove everything else. These steps can be carried out by running the following command.
+The `*_full.glb` files under these directories contain all the necessary information required in this project, so we can remove everything else. These steps can be carried out by running the following command. 
 
 ```bash
 python -m dataset_toolkits.datasets.3D_FRONT --clean --output-dir 3D-FRONT/3D-FRONT-TEST-SCENE
+```
+
+This command will change the directory structure to:
+```
+.../3D-FRONT/3D-FRONT-TEST-SCENE/
+|--0.glb
+|--1.glb
+...
+|--996.glb
+
 ```
 
 **Note:** Only the partaa of the dataset is downloaded.
