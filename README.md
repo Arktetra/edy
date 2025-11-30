@@ -20,6 +20,11 @@ git clone https://github.com/Arktetra/edy # for specific branch use -b <branch_n
 pip install -e .
 ```
 
+- For enforcing consistency
+```bash
+pre-commit install
+```
+
 > [!TIP]
 > If your device have lower computation power, try [google colab](https://colab.research.google.com/) for resouce hungry operartions/training and local only for any additional implementation.
 
@@ -48,7 +53,7 @@ If you go the directory of the dataset, then you will encoded directory names wi
 |  |--MasterBedroom-11613_full.glb
 ...
 ```
-The `*_full.glb` files under these directories contain all the necessary information required in this project, so we can remove everything else. These steps can be carried out by running the following command. 
+The `*_full.glb` files under these directories contain all the necessary information required in this project, so we can remove everything else. These steps can be carried out by running the following command.
 
 ```bash
 python -m dataset_toolkits.datasets.3D_FRONT --clean --output-dir 3D-FRONT/3D-FRONT-TEST-SCENE

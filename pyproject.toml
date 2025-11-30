@@ -18,6 +18,11 @@ dependencies = [
     "bpy>=5.0.0",
 ]
 
+[dependency-groups]
+dev = [
+    "pre-commit>=4.5.0",
+]
+
 [project.urls]
 Repository = "https://github.com/Arktetra/edy.git"
 
@@ -36,6 +41,13 @@ torch = [
     { index = "pytorch-cuda" }
 ]
 
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+ignore = ["E722", "E731", "F722"]
+
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
