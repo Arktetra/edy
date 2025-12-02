@@ -3,6 +3,7 @@ import shutil
 import subprocess
 from pathlib import Path
 from ..utils import load_env_variables
+from ..metadata.common import RAW_DATA_DIR
 
 import os
 
@@ -14,10 +15,8 @@ os.environ["HF_HUB_ETAG_TIMEOUT"] = "900"
 
 import huggingface_hub
 
-CURRENT_DIR = Path(__file__).resolve()
-ROOT = CURRENT_DIR.parent.parent.parent
-RAW_DATA_DIR = ROOT / "data" / "raw"
 FILENAME = "3D-FRONT-TEST-SCENE.tar.gz"
+
 
 def download(output_dir):
     load_env_variables()
@@ -27,8 +26,8 @@ def download(output_dir):
         repo_type="dataset",
         filename=FILENAME,
         local_dir=output_dir,
-        
     )
+
 
 def extract(output_dir):
     print(f"Extracting {FILENAME} to {output_dir}")
@@ -39,16 +38,17 @@ def extract(output_dir):
         print(f"Error during file extraction: {e}")
         exit()
 
+
 def clean(output_dir: Path):
     """
     Cleans the unnecessary glb models from the dataset.
     """
-    print(f"Cleaning unnecessary glb files from the given output dir.")
+    print("Cleaning unnecessary glb files from the given output dir.")
     required_glb_files = []
     try:
         for sub_dir in output_dir.iterdir():
             for x in Path(sub_dir).iterdir():
-                if x.name.endswith("full.glb"):
+                if x.name.endswith(".glb") and "full" not in x.name:
                     required_glb_files.append(x)
                 else:
                     if x.is_dir():
@@ -66,12 +66,8 @@ def clean(output_dir: Path):
         print("No sub-directories present to process.")
 
 
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        prog="3D-FRONT-dataset",
-        description="Download or extract 3D-FRONT dataset"
-    )
+    parser = argparse.ArgumentParser(prog="3D-FRONT-dataset", description="Download or extract 3D-FRONT dataset")
     parser.add_argument("--download", action="store_true")
     parser.add_argument("--extract", action="store_true")
     parser.add_argument("--clean", action="store_true")
