@@ -46,14 +46,14 @@ python -m dataset_toolkits.datasets.3D_FRONT --extract
 
 If you go the directory of the dataset, then you will encoded directory names with structure as shown in the example below:
 ```
-.../3D-FRONT/3D-FRONT-TEST-SCENE/
+.../edy/data/raw/3D-FRONT/3D-FRONT-TEST-SCENE/
 |--f7cf5008-957f-4286-8854-20f34f2a8ce3/
 |  |--MasterBedroom-11613/
 |  |--MasterBedroom-11613.glb
 |  |--MasterBedroom-11613_full.glb
 ...
 ```
-The `*_full.glb` files under these directories contain all the necessary information required in this project, so we can remove everything else. These steps can be carried out by running the following command.
+The `*.glb` files without `full` in its name under these directories contain all the necessary information required in this project, so we can remove everything else. These steps can be carried out by running the following command.
 
 ```bash
 python -m dataset_toolkits.datasets.3D_FRONT --clean --output-dir 3D-FRONT/3D-FRONT-TEST-SCENE
@@ -61,12 +61,28 @@ python -m dataset_toolkits.datasets.3D_FRONT --clean --output-dir 3D-FRONT/3D-FR
 
 This command will change the directory structure to:
 ```
-.../3D-FRONT/3D-FRONT-TEST-SCENE/
+.../edy/data/raw/3D-FRONT/3D-FRONT-TEST-SCENE/
 |--0.glb
 |--1.glb
 ...
 |--996.glb
 
+```
+
+The 3D models can then be rendered:
+```bash
+python -m dataset_toolkits.render --num-views 4
+```
+This also performs a kind of data augmentation. The result of the above command is:
+```
+.../edy/data/raw/processed/3D-FRONT/3D-FRONT-SCENE/renders/
+|--0/
+|  |--0.png
+|  |--1.png
+|  |--2.png
+|  |--3.png
+|--1/
+...
 ```
 
 **Note:** Only the partaa of the dataset is downloaded.
