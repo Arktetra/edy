@@ -1,10 +1,10 @@
-import argparse, sys, os, math, re, glob
+from pathlib import Path
+import math
 from typing import Callable, Dict, List, Tuple
 import bpy
-from mathutils import Vector, Matrix
+from mathutils import Vector
 import numpy as np
 import json
-import glob
 
 from ..types import View
 
@@ -25,37 +25,31 @@ IMPORT_FUNCTIONS: Dict[str, Callable] = {
     "blend": bpy.ops.wm.append,
 }
 
-EXT = {
-    'PNG': 'png',
-    'JPEG': 'jpg',
-    'OPEN_EXR': 'exr',
-    'TIFF': 'tiff',
-    'BMP': 'bmp',
-    'HDR': 'hdr',
-    'TARGA': 'tga'
-}
+EXT = {"PNG": "png", "JPEG": "jpg", "OPEN_EXR": "exr", "TIFF": "tiff", "BMP": "bmp", "HDR": "hdr", "TARGA": "tga"}
 
-def init_render(engine='CYCLES', resolution=512, geo_mode=False):
+
+def init_render(engine="CYCLES", resolution=512, geo_mode=False):
     bpy.context.scene.render.engine = engine
     bpy.context.scene.render.resolution_x = resolution
     bpy.context.scene.render.resolution_y = resolution
     bpy.context.scene.render.resolution_percentage = 100
-    bpy.context.scene.render.image_settings.file_format = 'PNG'
-    bpy.context.scene.render.image_settings.color_mode = 'RGBA'
+    bpy.context.scene.render.image_settings.file_format = "PNG"
+    bpy.context.scene.render.image_settings.color_mode = "RGBA"
     bpy.context.scene.render.film_transparent = True
-    
-    bpy.context.scene.cycles.device = 'GPU'
+
+    bpy.context.scene.cycles.device = "GPU"
     bpy.context.scene.cycles.samples = 128 if not geo_mode else 1
-    bpy.context.scene.cycles.filter_type = 'BOX'
+    bpy.context.scene.cycles.pixel_filter_type = "BOX"
     bpy.context.scene.cycles.filter_width = 1
     bpy.context.scene.cycles.diffuse_bounces = 1
     bpy.context.scene.cycles.glossy_bounces = 1
     bpy.context.scene.cycles.transparent_max_bounces = 3 if not geo_mode else 0
     bpy.context.scene.cycles.transmission_bounces = 3 if not geo_mode else 1
     bpy.context.scene.cycles.use_denoising = True
-        
-    bpy.context.preferences.addons['cycles'].preferences.get_devices()
-    bpy.context.preferences.addons['cycles'].preferences.compute_device_type = 'CUDA'
+
+    bpy.context.preferences.addons["cycles"].preferences.get_devices()
+    bpy.context.preferences.addons["cycles"].preferences.compute_device_type = "CUDA"
+
 
 def init_scene() -> None:
     """Resets the scene to a clean state.
@@ -79,55 +73,53 @@ def init_scene() -> None:
     for image in bpy.data.images:
         bpy.data.images.remove(image, do_unlink=True)
 
+
 def init_camera():
-    cam = bpy.data.objects.new('Camera', bpy.data.cameras.new('Camera'))
+    cam = bpy.data.objects.new("Camera", bpy.data.cameras.new("Camera"))
     bpy.context.collection.objects.link(cam)
     bpy.context.scene.camera = cam
     cam.data.sensor_height = cam.data.sensor_width = 32
-    cam_constraint = cam.constraints.new(type='TRACK_TO')
-    cam_constraint.track_axis = 'TRACK_NEGATIVE_Z'
-    cam_constraint.up_axis = 'UP_Y'
+    cam_constraint = cam.constraints.new(type="TRACK_TO")
+    cam_constraint.track_axis = "TRACK_NEGATIVE_Z"
+    cam_constraint.up_axis = "UP_Y"
     cam_empty = bpy.data.objects.new("Empty", None)
     cam_empty.location = (0, 0, 0)
     bpy.context.scene.collection.objects.link(cam_empty)
     cam_constraint.target = cam_empty
     return cam
 
+
 def init_lighting():
     # Clear existing lights
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.select_by_type(type="LIGHT")
     bpy.ops.object.delete()
-    
+
     # Create key light
     default_light = bpy.data.objects.new("Default_Light", bpy.data.lights.new("Default_Light", type="POINT"))
     bpy.context.collection.objects.link(default_light)
     default_light.data.energy = 1000
     default_light.location = (4, 1, 6)
     default_light.rotation_euler = (0, 0, 0)
-    
+
     # create top light
     top_light = bpy.data.objects.new("Top_Light", bpy.data.lights.new("Top_Light", type="AREA"))
     bpy.context.collection.objects.link(top_light)
     top_light.data.energy = 10000
     top_light.location = (0, 0, 10)
     top_light.scale = (100, 100, 100)
-    
+
     # create bottom light
     bottom_light = bpy.data.objects.new("Bottom_Light", bpy.data.lights.new("Bottom_Light", type="AREA"))
     bpy.context.collection.objects.link(bottom_light)
     bottom_light.data.energy = 1000
     bottom_light.location = (0, 0, -10)
     bottom_light.rotation_euler = (0, 0, 0)
-    
-    return {
-        "default_light": default_light,
-        "top_light": top_light,
-        "bottom_light": bottom_light
-    }
+
+    return {"default_light": default_light, "top_light": top_light, "bottom_light": bottom_light}
 
 
-def load_object(object_path: str) -> None:
+def load_object(object_path: Path) -> None:
     """Loads a model with a supported file extension into the scene.
 
     Args:
@@ -139,7 +131,7 @@ def load_object(object_path: str) -> None:
     Returns:
         None
     """
-    file_extension = object_path.split(".")[-1].lower()
+    file_extension = object_path.suffix[1:]
     if file_extension is None:
         raise ValueError(f"Unsupported file type: {object_path}")
 
@@ -147,13 +139,15 @@ def load_object(object_path: str) -> None:
     import_function = IMPORT_FUNCTIONS[file_extension]
 
     print(f"Loading object from {object_path}")
+    object_path = str(object_path)
     if file_extension == "blend":
         import_function(directory=object_path, link=False)
     elif file_extension in {"glb", "gltf"}:
-        import_function(filepath=object_path, merge_vertices=True, import_shading='NORMALS')
+        import_function(filepath=object_path, merge_vertices=True, import_shading="NORMALS")
     else:
         import_function(filepath=object_path)
-        
+
+
 def delete_invisible_objects() -> None:
     """Deletes all invisible objects in the scene.
 
@@ -174,7 +168,8 @@ def delete_invisible_objects() -> None:
     invisible_collections = [col for col in bpy.data.collections if col.hide_viewport]
     for col in invisible_collections:
         bpy.data.collections.remove(col)
-        
+
+
 def split_mesh_normal():
     bpy.ops.object.select_all(action="DESELECT")
     objs = [obj for obj in bpy.context.scene.objects if obj.type == "MESH"]
@@ -182,27 +177,30 @@ def split_mesh_normal():
     for obj in objs:
         obj.select_set(True)
     bpy.ops.object.mode_set(mode="EDIT")
-    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.select_all(action="SELECT")
     bpy.ops.mesh.split_normals()
-    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.object.mode_set(mode="OBJECT")
     bpy.ops.object.select_all(action="DESELECT")
-            
+
+
 def delete_custom_normals():
-     for this_obj in bpy.data.objects:
+    for this_obj in bpy.data.objects:
         if this_obj.type == "MESH":
             bpy.context.view_layer.objects.active = this_obj
             bpy.ops.mesh.customdata_custom_splitnormals_clear()
+
 
 def override_material():
     new_mat = bpy.data.materials.new(name="Override0123456789")
     new_mat.use_nodes = True
     new_mat.node_tree.nodes.clear()
-    bsdf = new_mat.node_tree.nodes.new('ShaderNodeBsdfDiffuse')
+    bsdf = new_mat.node_tree.nodes.new("ShaderNodeBsdfDiffuse")
     bsdf.inputs[0].default_value = (0.5, 0.5, 0.5, 1)
     bsdf.inputs[1].default_value = 1
-    output = new_mat.node_tree.nodes.new('ShaderNodeOutputMaterial')
-    new_mat.node_tree.links.new(bsdf.outputs['BSDF'], output.inputs['Surface'])
-    bpy.context.scene.view_layers['View Layer'].material_override = new_mat
+    output = new_mat.node_tree.nodes.new("ShaderNodeOutputMaterial")
+    new_mat.node_tree.links.new(bsdf.outputs["BSDF"], output.inputs["Surface"])
+    bpy.context.scene.view_layers["ViewLayer"].material_override = new_mat
+
 
 def unhide_all_objects() -> None:
     """Unhides all objects in the scene.
@@ -212,7 +210,8 @@ def unhide_all_objects() -> None:
     """
     for obj in bpy.context.scene.objects:
         obj.hide_set(False)
-        
+
+
 def convert_to_meshes() -> None:
     """Converts all objects in the scene to meshes.
 
@@ -224,7 +223,8 @@ def convert_to_meshes() -> None:
     for obj in bpy.context.scene.objects:
         obj.select_set(True)
     bpy.ops.object.convert(target="MESH")
-        
+
+
 def triangulate_meshes() -> None:
     """Triangulates all meshes in the scene.
 
@@ -242,6 +242,7 @@ def triangulate_meshes() -> None:
     bpy.ops.mesh.quads_convert_to_tris(quad_method="BEAUTY", ngon_method="BEAUTY")
     bpy.ops.object.mode_set(mode="OBJECT")
     bpy.ops.object.select_all(action="DESELECT")
+
 
 def scene_bbox() -> Tuple[Vector, Vector]:
     """Returns the bounding box of the scene.
@@ -266,6 +267,7 @@ def scene_bbox() -> Tuple[Vector, Vector]:
     if not found:
         raise RuntimeError("no objects in scene to compute bounding box for")
     return Vector(bbox_min), Vector(bbox_max)
+
 
 def normalize_scene() -> Tuple[float, Vector]:
     """Normalizes the scene by scaling and translating it to fit in a unit cube centered
@@ -301,8 +303,9 @@ def normalize_scene() -> Tuple[float, Vector]:
     offset = -(bbox_min + bbox_max) / 2
     scene.matrix_world.translation += offset
     bpy.ops.object.select_all(action="DESELECT")
-    
+
     return scale, offset
+
 
 def get_transform_matrix(obj: bpy.types.Object) -> list:
     pos, rt, _ = obj.matrix_world.decompose()
@@ -317,92 +320,79 @@ def get_transform_matrix(obj: bpy.types.Object) -> list:
     matrix.append([0, 0, 0, 1])
     return matrix
 
-def main(arg):
-    os.makedirs(arg.output_folder, exist_ok=True)
-    
+
+def render(
+    output_dir: Path,
+    engine: str,
+    resolution: int,
+    object: Path,
+    views: List[View],
+    geo_mode: bool = True,
+    split_normal: bool = True,
+    save_mesh: bool = True,
+):
+    """Renders the given object by rotating a camera around it.
+
+    Args:
+        output_dir (Path): the path where the outputs will be saved at.
+        engine (str): blender internal engine for rendering. E.g. CYCLES, BLENDER_EEVEE, ...
+        resolution (int): the resolution of the rendered images.
+        object (Path): the path to the 3D model file to be rendered.
+        views (List[View]): the views from which the object will be rendered.
+        geo_mode (bool, optional): geometry mode for rendering. Defaults to True.
+        split_normal (bool, optional): split the normals of the mesh. Defaults to True.
+        save_mesh (bool, optional): save the mesh as a `.ply` file. Defaults to True.
+    """
     # Initialize context
-    init_render(engine=arg.engine, resolution=arg.resolution, geo_mode=arg.geo_mode)
-   
+    init_render(engine, resolution, geo_mode)
     init_scene()
-    load_object(arg.object)
-    if arg.split_normal:
+    load_object(object)
+
+    if split_normal:
         split_mesh_normal()
 
-        # delete_custom_normals()
-    print('[INFO] Scene initialized.')
-    
-    # normalize scene
     scale, offset = normalize_scene()
-    print('[INFO] Scene normalized.')
-    
-    # Initialize camera and lighting
+
     cam = init_camera()
     init_lighting()
-    print('[INFO] Camera and lighting initialized.')
 
-    # Override material
-    if arg.geo_mode:
+    if geo_mode:
         override_material()
-    
-    # Create a list of views
+
     to_export = {
         "aabb": [[-0.5, -0.5, -0.5], [0.5, 0.5, 0.5]],
         "scale": scale,
         "offset": [offset.x, offset.y, offset.z],
-        "frames": []
+        "frames": [],
     }
-    views: List[View] = json.loads(arg.views)
+
     for i, view in enumerate(views):
         cam.location = (
-            view['radius'] * np.cos(view['yaw']) * np.cos(view['pitch']),
-            view['radius'] * np.sin(view['yaw']) * np.cos(view['pitch']),
-            view['radius'] * np.sin(view['pitch'])
+            view["radius"] * np.cos(view["yaw"]) * np.cos(view["pitch"]),
+            view["radius"] * np.sin(view["yaw"]) * np.cos(view["pitch"]),
+            view["radius"] * np.sin(view["pitch"]),
         )
-        cam.data.lens = 16 / np.tan(view['fov'] / 2)
-        
-        
-        bpy.context.scene.render.filepath = os.path.join(arg.output_folder, f'{i:03d}.png')
-            
-        # Render the scene
+        cam.data.lens = 16 / np.tan(view["fov"] / 2)
+
+        bpy.context.scene.render.filepath = str(output_dir / object.stem / f"{i}.png")
+
         bpy.ops.render.render(write_still=True)
         bpy.context.view_layer.update()
-            
-        # Save camera parameters
+
         metadata = {
-            "file_path": f'{i:03d}.png',
-            "camera_angle_x": view['fov'],
-            "transform_matrix": get_transform_matrix(cam)
+            "file_path": f"{i}.png",
+            "camera_angle_x": view["fov"],
+            "transform_matrix": get_transform_matrix(cam),
         }
 
         to_export["frames"].append(metadata)
-    
-    # Save the camera parameters
-    with open(os.path.join(arg.output_folder, 'transforms.json'), 'w') as f:
+
+    with open(output_dir / "transforms.json", "w") as f:
         json.dump(to_export, f, indent=4)
-        
-    if arg.save_mesh:
-        # triangulate meshes
+
+    if save_mesh:
         unhide_all_objects()
         convert_to_meshes()
         triangulate_meshes()
-        print('[INFO] Meshes triangulated.')
-        
-        # export ply mesh
-        bpy.ops.export_mesh.ply(filepath=os.path.join(arg.output_folder, 'mesh.ply'))
 
-        
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Renders given obj file by rotation a camera around it.')
-    parser.add_argument('--views', type=str, help='JSON string of views. Contains a list of {yaw, pitch, radius, fov} object.')
-    parser.add_argument('--object', type=str, help='Path to the 3D model file to be rendered.')
-    parser.add_argument('--output_folder', type=str, default='/tmp', help='The path the output will be dumped to.')
-    parser.add_argument('--resolution', type=int, default=512, help='Resolution of the images.')
-    parser.add_argument('--engine', type=str, default='CYCLES', help='Blender internal engine for rendering. E.g. CYCLES, BLENDER_EEVEE, ...')
-    parser.add_argument('--geo_mode', action='store_true', help='Geometry mode for rendering.')
-    parser.add_argument('--split_normal', action='store_true', help='Split the normals of the mesh.')
-    parser.add_argument('--save_mesh', action='store_true', help='Save the mesh as a .ply file.')
-    argv = sys.argv[sys.argv.index("--") + 1:]
-    args = parser.parse_args(argv)
-
-    main(args)
-    
+        bpy.ops.export_mesh.ply(filepath=output_dir / "models" / "mesh.ply")
