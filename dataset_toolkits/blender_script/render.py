@@ -27,6 +27,17 @@ IMPORT_FUNCTIONS: Dict[str, Callable] = {
 
 EXT = {"PNG": "png", "JPEG": "jpg", "OPEN_EXR": "exr", "TIFF": "tiff", "BMP": "bmp", "HDR": "hdr", "TARGA": "tga"}
 
+COLORS = {
+    0: (1.0, 0.0, 0.0, 1.0),
+    1: (0.5, 0.5, 0.0, 1.0),
+    2: (0.0, 1.0, 0.0, 1.0),
+    3: (0.0, 0.5, 0.5, 1.0),
+    4: (0.0, 0.0, 1.0, 1.0),
+    5: (0.0, 0.5, 1.0, 1.0),
+    6: (1.0, 0.5, 0.0, 1.0),
+    7: (1.0, 0.0, 0.5, 1.0),
+}
+
 
 def init_render(engine="CYCLES", resolution=512, geo_mode=False):
     bpy.context.scene.render.engine = engine
@@ -202,6 +213,17 @@ def override_material():
     bpy.context.scene.view_layers["ViewLayer"].material_override = new_mat
 
 
+def override_material_emission():
+    new_mat = bpy.data.materials.new(name="EmissionOverride")
+    new_mat.use_nodes = True
+    new_mat.node_tree.nodes.clear()
+    emission = new_mat.node_tree.nodes.new("ShaderNodeEmission")
+    emission.inputs["Color"].default_value = (1.0, 1.0, 1.0, 1.0)
+    output = new_mat.node_tree.nodes.new("ShaderNodeOutputMaterial")
+    new_mat.node_tree.links.new(emission.outputs["Emission"], output.inputs["Surface"])
+    bpy.context.scene.view_layers["ViewLayer"].material_override = new_mat
+
+
 def unhide_all_objects() -> None:
     """Unhides all objects in the scene.
 
@@ -325,11 +347,12 @@ def render(
     output_dir: Path,
     engine: str,
     resolution: int,
-    object: Path,
+    object_path: Path,
     views: List[View],
     geo_mode: bool = True,
     split_normal: bool = True,
     save_mesh: bool = True,
+    save_mask: bool = True,
 ):
     """Renders the given object by rotating a camera around it.
 
@@ -337,16 +360,17 @@ def render(
         output_dir (Path): the path where the outputs will be saved at.
         engine (str): blender internal engine for rendering. E.g. CYCLES, BLENDER_EEVEE, ...
         resolution (int): the resolution of the rendered images.
-        object (Path): the path to the 3D model file to be rendered.
+        object_path (Path): the path to the 3D model file to be rendered.
         views (List[View]): the views from which the object will be rendered.
         geo_mode (bool, optional): geometry mode for rendering. Defaults to True.
         split_normal (bool, optional): split the normals of the mesh. Defaults to True.
         save_mesh (bool, optional): save the mesh as a `.ply` file. Defaults to True.
+        save_masks (bool, optional): save masks for rendered images.
     """
     # Initialize context
     init_render(engine, resolution, geo_mode)
     init_scene()
-    load_object(object)
+    load_object(object_path)
 
     if split_normal:
         split_mesh_normal()
@@ -374,7 +398,7 @@ def render(
         )
         cam.data.lens = 16 / np.tan(view["fov"] / 2)
 
-        bpy.context.scene.render.filepath = str(output_dir / object.stem / f"{i}.png")
+        bpy.context.scene.render.filepath = str(output_dir / "renders" / object_path.stem / f"{i}.png")
 
         bpy.ops.render.render(write_still=True)
         bpy.context.view_layer.update()
@@ -385,10 +409,46 @@ def render(
             "transform_matrix": get_transform_matrix(cam),
         }
 
+        if save_mask:
+            # override_material_emission()
+            objects = bpy.context.scene.collection.all_objects["world"].children
+
+            original_materials = {}
+            for obj in bpy.data.objects:
+                if obj.type == "MESH":
+                    original_materials[obj.name] = []
+                    for mat in obj.data.materials:
+                        original_materials[obj.name].append(mat)
+
+            for j, obj in enumerate(objects):
+                new_mat = bpy.data.materials.new(name="MaskMaterialObjName")
+                new_mat.use_nodes = True
+                new_mat.node_tree.nodes.clear()
+                emission = new_mat.node_tree.nodes.new("ShaderNodeEmission")
+                emission.inputs["Color"].default_value = COLORS[j]
+                emission.inputs["Strength"].default_value = 1.0
+                output = new_mat.node_tree.nodes.new("ShaderNodeOutputMaterial")
+                new_mat.node_tree.links.new(emission.outputs["Emission"], output.inputs["Surface"])
+                obj.data.materials[0] = new_mat
+
+            bpy.context.scene.render.filepath = str(output_dir / "masks" / object_path.stem / f"{i}.png")
+            bpy.ops.render.render(write_still=True)
+
+            for obj_name, mats in original_materials.items():
+                obj = bpy.data.objects.get(obj_name)
+                if obj and obj.type == "MESH":
+                    # Clear current materials
+                    obj.data.materials.clear()
+                    # Re-assign original materials
+                    for mat in mats:
+                        obj.data.materials.append(mat)
+
+            bpy.context.scene.view_layers["ViewLayer"].material_override = None
+
         to_export["frames"].append(metadata)
 
-    with open(output_dir / "transforms.json", "w") as f:
-        json.dump(to_export, f, indent=4)
+        with open(output_dir / "renders" / object_path.stem / "transforms.json", "w") as f:
+            json.dump(to_export, f, indent=4)
 
     if save_mesh:
         unhide_all_objects()

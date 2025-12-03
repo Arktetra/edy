@@ -19,6 +19,7 @@ def _render(file_path, num_views):
     pitchs = []
     offset = (np.random.rand(), np.random.rand())
     for i in range(num_views):
+        # y, p = [0., 0.]
         y, p = sphere_hammersley_sequence(i, num_views, offset)
         yaws.append(y)
         pitchs.append(p)
@@ -28,13 +29,14 @@ def _render(file_path, num_views):
 
     print("launching blender")
     render(
-        output_dir=PROCESSED_DATA_DIR / "renders",
+        output_dir=PROCESSED_DATA_DIR,
         engine="CYCLES",
         resolution=512,
-        object=file_path,
+        object_path=file_path,
         views=views,
         geo_mode=False,
         save_mesh=False,
+        save_mask=True,
     )
 
 
@@ -43,15 +45,18 @@ if __name__ == "__main__":
         prog="render", description="Render the model in the raw directory to obtain scenes from different views."
     )
     parser.add_argument("--num-views", type=int, default=1, help="Number of views to render")
+    parser.add_argument("--max-workers", type=int, default=1, help="Maximum number of workers")
+    parser.add_argument("--save-mask", action="store_true", help="create masks for rendered images.")
     args = parser.parse_args()
     Path.mkdir(PROCESSED_DATA_DIR, parents=True, exist_ok=True)
 
     signal.signal(signal.SIGTERM, handler)
 
     input_paths = list(RAW_DATA_DIR.glob("**/*"))
-    with ProcessPoolExecutor(max_workers=2) as executor:
+    # _render(input_paths[0], 2)
+    with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
         #     # executor.map(_render, input_paths, [args.num_views] * len(input_paths))
         try:
-            executor.map(_render, input_paths, [args.num_views] * len(input_paths))
+            executor.map(_render, input_paths, [args.num_views] * len(input_paths), [args.save_mask] * len(input_paths))
         except KeyboardInterrupt:
             print("Keyboard interrupt occurred.")
