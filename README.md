@@ -69,9 +69,9 @@ This command will change the directory structure to:
 
 ```
 
-The 3D models can then be rendered:
+The 3D models can then be rendered to 4 different views through two processes by:
 ```bash
-python -m dataset_toolkits.render --num-views 4
+python -m dataset_toolkits.render --num-views 4 --max-workers 2
 ```
 This also performs a kind of data augmentation. The result of the above command is:
 ```
