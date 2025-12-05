@@ -434,7 +434,7 @@ def render(
             objects_count = len(objects)
 
             # emission node creating helper
-            def create_emi_mat(name, color=1, strength=1):
+            def create_emi_mat(name, color=255, strength=1):
                 emi_mat = bpy.data.materials.new(name=name)
                 emi_mat.use_nodes = True
 
@@ -470,30 +470,6 @@ def render(
                 for obj in objects:
                     obj.active_material = def_mat
                     obj.visible_diffuse = True  # reset all to true..
-
-            # creating new emission mat for active object
-            emi_mat = bpy.data.materials.new(name="emission")
-            def_mat = bpy.data.materials.new(
-                name="default"
-            )  # this is for default material i.e other than active object..
-            def_princ_node = def_mat.node_tree.nodes["Principled BSDF"]
-            def_princ_node.inputs["Base Color"].default_value = (0.0, 0.0, 0.0, 1.0)
-
-            emi_mat.use_nodes = True
-
-            # clearing existing nodes for a clean slate
-            if emi_mat.node_tree:
-                emi_mat.node_tree.links.clear()
-                emi_mat.node_tree.nodes.clear()
-
-            nodes = emi_mat.node_tree.nodes
-            links = emi_mat.node_tree.links
-
-            # creating output and emission nodes
-            output_node = nodes.new(type="ShaderNodeOutputMaterial")
-            emission_node = nodes.new(type="ShaderNodeEmission")
-
-            links.new(emission_node.outputs["Emission"], output_node.inputs["Surface"])
 
             # for each object from the single view, set emission mat to active object and default to rest & render
             for ind in range(objects_count):
