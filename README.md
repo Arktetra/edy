@@ -73,15 +73,29 @@ The 3D models can then be rendered to 4 different views through two processes by
 ```bash
 python -m dataset_toolkits.render --num-views 4 --max-workers 2
 ```
-This also performs a kind of data augmentation. The result of the above command is:
+This also performs a kind of data augmentation. The above command renders the different views of the scene and the corresponding masks:
 ```
-.../edy/data/raw/processed/3D-FRONT/3D-FRONT-SCENE/renders/
-|--0/
-|  |--0.png
-|  |--1.png
-|  |--2.png
-|  |--3.png
-|--1/
+.../edy/data/raw/processed/3D-FRONT/3D-FRONT-SCENE/
+|--masks/
+|  |--0/
+|  |  |--0/
+|  |  |  |--0.png
+|  |  |  |--1.png
+|  |  |  |--2.png
+|  |  |  |--3.png
+|  |  |  |--4.png
+|  |  |--1/
+|  |  |--2/
+|  |  |--3/
+|  |--1/
+...
+|--renders/
+|  |--0/
+|  |  |--0.png
+|  |  |--1.png
+|  |  |--2.png
+|  |  |--3.png
+|  |--1/
 ...
 ```
 
