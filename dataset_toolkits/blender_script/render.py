@@ -464,13 +464,7 @@ def render(
             # creating new emission mat for active object
             emi_mat = create_emi_mat("emission")
             def_mat = create_emi_mat("def_emi", 0, 0)  # this is for default material i.e other than active object..
-
-            # for each object from the single view, set emission mat to active object and default to rest & render
-            for ind in range(objects_count):
-                for obj in objects:
-                    obj.active_material = def_mat
-                    obj.visible_diffuse = True  # reset all to true..
-
+            
             # for each object from the single view, set emission mat to active object and default to rest & render
             for ind in range(objects_count):
                 for obj in objects:
