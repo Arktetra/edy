@@ -390,6 +390,8 @@ def render(
         "frames": [],
     }
 
+    bpy.data.worlds["World"].node_tree.nodes["Background"].inputs[0].default_value = (0, 0, 0, 1)
+
     for i, view in enumerate(views):
         cam.location = (
             view["radius"] * np.cos(view["yaw"]) * np.cos(view["pitch"]),
@@ -430,6 +432,44 @@ def render(
 
             # for each object mask generation iterating over objects count..
             objects_count = len(objects)
+
+            # emission node creating helper
+            def create_emi_mat(name, color=1, strength=1):
+                emi_mat = bpy.data.materials.new(name=name)
+                emi_mat.use_nodes = True
+
+                # Clear existing nodes for a clean slate
+                if emi_mat.node_tree:
+                    emi_mat.node_tree.links.clear()
+                    emi_mat.node_tree.nodes.clear()
+
+                nodes = emi_mat.node_tree.nodes
+                links = emi_mat.node_tree.links
+
+                # Create output and emission nodes
+                output_node = nodes.new(type="ShaderNodeOutputMaterial")
+                emission_node = nodes.new(type="ShaderNodeEmission")
+
+                # Set emission color and strength, if not default to white, and 1
+                c = color / 255
+                colRGBA = (c, c, c, 1)
+                emission_node.inputs["Color"].default_value = colRGBA
+                emission_node.inputs["Strength"].default_value = strength
+
+                # Link emission output to material output surface
+                links.new(emission_node.outputs["Emission"], output_node.inputs["Surface"])
+
+                return emi_mat
+
+            # creating new emission mat for active object
+            emi_mat = create_emi_mat("emission")
+            def_mat = create_emi_mat("def_emi", 0, 0)  # this is for default material i.e other than active object..
+
+            # for each object from the single view, set emission mat to active object and default to rest & render
+            for ind in range(objects_count):
+                for obj in objects:
+                    obj.active_material = def_mat
+                    obj.visible_diffuse = True  # reset all to true..
 
             # creating new emission mat for active object
             emi_mat = bpy.data.materials.new(name="emission")
