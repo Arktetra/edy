@@ -378,7 +378,7 @@ def render(
     scale, offset = normalize_scene()
 
     cam = init_camera()
-    init_lighting()
+    scene_lights = init_lighting()
 
     if geo_mode:
         override_material()
@@ -397,6 +397,10 @@ def render(
             np.abs(view["radius"] * np.sin(view["pitch"])),
         )
         cam.data.lens = 16 / np.tan(view["fov"] / 2)
+
+        # enabling all the lights to render the original scene
+        for light_key in scene_lights:
+            scene_lights[light_key].hide_render = True
 
         bpy.context.scene.render.filepath = str(output_dir / "renders" / object_path.stem / f"{i}.png")
 
@@ -419,6 +423,10 @@ def render(
                     original_materials[obj.name] = []
                     for mat in obj.data.materials:
                         original_materials[obj.name].append(mat)
+
+            # disabling all the lights to render the mask case
+            for light_key in scene_lights:
+                scene_lights[light_key].hide_render = False
 
 
             # for each object mask generation iterating over objects count..
