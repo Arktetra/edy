@@ -400,7 +400,7 @@ def render(
 
         # enabling all the lights to render the original scene
         for light_key in scene_lights:
-            scene_lights[light_key].hide_render = True
+            scene_lights[light_key].hide_render = False
 
         bpy.context.scene.render.filepath = str(output_dir / "renders" / object_path.stem / f"{i}.png")
 
@@ -426,7 +426,7 @@ def render(
 
             # disabling all the lights to render the mask case
             for light_key in scene_lights:
-                scene_lights[light_key].hide_render = False
+                scene_lights[light_key].hide_render = True
 
 
             # for each object mask generation iterating over objects count..
