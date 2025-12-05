@@ -435,6 +435,9 @@ def render(
             # creating new emission mat for active object
             emi_mat = bpy.data.materials.new(name="emission")
             def_mat = bpy.data.materials.new(name="default") # this is for default material i.e other than active object..
+            def_princ_node = def_mat.node_tree.nodes["Principled BSDF"]
+            def_princ_node.inputs["Base Color"].default_value = (0.0, 0.0, 0.0, 1.0)
+            
             emi_mat.use_nodes = True
 
             # clearing existing nodes for a clean slate
