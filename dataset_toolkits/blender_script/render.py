@@ -400,7 +400,7 @@ def render(
 
         # enabling all the lights to render the original scene
         for light_key in scene_lights:
-            scene_lights[light_key].hide_render = True
+            scene_lights[light_key].hide_render = False
 
         bpy.context.scene.render.filepath = str(output_dir / "renders" / object_path.stem / f"{i}.png")
 
@@ -426,15 +426,16 @@ def render(
 
             # disabling all the lights to render the mask case
             for light_key in scene_lights:
-                scene_lights[light_key].hide_render = False
-
+                scene_lights[light_key].hide_render = True
 
             # for each object mask generation iterating over objects count..
             objects_count = len(objects)
 
             # creating new emission mat for active object
             emi_mat = bpy.data.materials.new(name="emission")
-            def_mat = bpy.data.materials.new(name="default") # this is for default material i.e other than active object..
+            def_mat = bpy.data.materials.new(
+                name="default"
+            )  # this is for default material i.e other than active object..
             emi_mat.use_nodes = True
 
             # clearing existing nodes for a clean slate
@@ -446,21 +447,21 @@ def render(
             links = emi_mat.node_tree.links
 
             # creating output and emission nodes
-            output_node = nodes.new(type='ShaderNodeOutputMaterial')
-            emission_node = nodes.new(type='ShaderNodeEmission')
+            output_node = nodes.new(type="ShaderNodeOutputMaterial")
+            emission_node = nodes.new(type="ShaderNodeEmission")
 
-            links.new(emission_node.outputs['Emission'], output_node.inputs['Surface'])
+            links.new(emission_node.outputs["Emission"], output_node.inputs["Surface"])
 
-            # for each object from the single view, set emission mat to active object and default to rest & render  
+            # for each object from the single view, set emission mat to active object and default to rest & render
             for ind in range(objects_count):
                 for obj in objects:
                     obj.active_material = def_mat
-                    obj.visible_diffuse = True # reset all to true..
+                    obj.visible_diffuse = True  # reset all to true..
 
                 # now set the material for mask case... (emission with ray visibility diffuse set to false)
                 active_obj = objects[ind]
                 active_obj.active_material = emi_mat
-                active_obj.visible_diffuse = False # this is to ensure that light bounces doesn't occur..
+                active_obj.visible_diffuse = False  # this is to ensure that light bounces doesn't occur..
 
                 # this path might require recheck/change
                 bpy.context.scene.render.filepath = str(output_dir / "masks" / object_path.stem / f"{i}/{ind}.png")
