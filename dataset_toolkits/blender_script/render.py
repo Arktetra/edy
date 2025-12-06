@@ -7,7 +7,7 @@ import numpy as np
 import json
 import sys
 
-from ..types import View, SceneProps
+from ..types import View
 
 
 """=============== BLENDER ==============="""
@@ -36,16 +36,17 @@ EXPORT_FUNCTIONS: Dict[str, Callable] = {
 
 EXT = {"PNG": "png", "JPEG": "jpg", "OPEN_EXR": "exr", "TIFF": "tiff", "BMP": "bmp", "HDR": "hdr", "TARGA": "tga"}
 
-OUTPUT_RES_PER = 100 # render res size in percentage.. i.e 100%
+OUTPUT_RES_PER = 100  # render res size in percentage.. i.e 100%
 IMAGE_FILE_FORMAT = "PNG"
 IMAGE_COLOR_MODE = "RGBA"
-RENDER_SAMPLE_COUNT_NORMAL = 128 # this is the total sample taken for single image render (in cycles)
+RENDER_SAMPLE_COUNT_NORMAL = 128  # this is the total sample taken for single image render (in cycles)
 RENDER_SAMPLE_COUNT_FALLBACK = 1
+
 
 def init_render(engine="CYCLES", resolution=512, geo_mode=False) -> None:
     """
-    Initialize the blender settings for engine, images, cycle properties for render setup 
-    
+    Initialize the blender settings for engine, images, cycle properties for render setup
+
     Returns:
         None
     """
@@ -63,7 +64,9 @@ def init_render(engine="CYCLES", resolution=512, geo_mode=False) -> None:
 
     engine_cycle = active_context.scene.cycles
 
-    engine_cycle.device = "GPU" # this might cause the problem if the device doesn't have GPU listed/available to choose
+    engine_cycle.device = (
+        "GPU"  # this might cause the problem if the device doesn't have GPU listed/available to choose
+    )
     engine_cycle.samples = RENDER_SAMPLE_COUNT_NORMAL if not geo_mode else RENDER_SAMPLE_COUNT_FALLBACK
     engine_cycle.pixel_filter_type = "BOX"
     engine_cycle.filter_width = 1
@@ -77,9 +80,9 @@ def init_render(engine="CYCLES", resolution=512, geo_mode=False) -> None:
     active_context.preferences.addons["cycles"].preferences.get_devices()
 
     comp_device = "NONE"
-    if sys.platform == 'darwin':
+    if sys.platform == "darwin":
         comp_device = "METAL"
-    elif sys.platform.startswith('linux') or sys.platform == 'win32':
+    elif sys.platform.startswith("linux") or sys.platform == "win32":
         comp_device = "CUDA"
     else:
         print(f"Unknown platform so fallback to NONE for {sys.platform}")
@@ -125,7 +128,7 @@ def init_camera():
 
     # this is the empty target that camera will focus with above constrain
     cam_empty = bpy.data.objects.new("Empty", None)
-    cam_empty.location = (0, 0, 0) # assuming that the scene is fixed at the center/origin point.
+    cam_empty.location = (0, 0, 0)  # assuming that the scene is fixed at the center/origin point.
     active_context.scene.collection.objects.link(cam_empty)
     cam_constraint.target = cam_empty
 
@@ -141,7 +144,7 @@ def init_lighting():
     active_collection = bpy.context.collection
     area_light_energy = 10000
     area_light_scale = (100, 100, 100)
-    area_light_location = (0, 0, 10)
+    area_light_location = [0, 0, 10]
 
     # Create key light
     default_light = bpy.data.objects.new("Default_Light", bpy.data.lights.new("Default_Light", type="POINT"))
@@ -162,9 +165,9 @@ def init_lighting():
     bottom_light = bpy.data.objects.new("Bottom_Light", bpy.data.lights.new("Bottom_Light", type="AREA"))
     active_collection.objects.link(bottom_light)
     bottom_light.data.energy = area_light_energy
-    bottom_light.location = area_light_location * -1 # place exactly opposite to the top light
+    bottom_light.location = tuple(i * -1 for i in area_light_location)  # place exactly opposite to the top light
     bottom_light.scale = area_light_scale
-    bottom_light.rotation_euler = (np.pi, 0, 0) # creating the bottom light facing to origin
+    bottom_light.rotation_euler = (np.pi, 0, 0)  # creating the bottom light facing to origin
 
     return {"default_light": default_light, "top_light": top_light, "bottom_light": bottom_light}
 
@@ -381,6 +384,7 @@ def get_transform_matrix(obj: bpy.types.Object) -> list:
     matrix.append([0, 0, 0, 1])
     return matrix
 
+
 # emission node creating helper function
 def create_emi_mat(name, color=255, strength=1):
     emi_mat = bpy.data.materials.new(name=name)
@@ -469,10 +473,7 @@ def render(
                 original_materials[obj.name].append(mat)
 
     # this will be the override materials for mask rendering, i.e two emission (white & black)
-    mask_materials = {
-        "emission": create_emi_mat("emission"),
-        "default": create_emi_mat("def_emi", 0, 0)
-    }
+    mask_materials = {"emission": create_emi_mat("emission"), "default": create_emi_mat("def_emi", 0, 0)}
 
     # selecting the objects that are to be rendered (i.e inside world objects) & its count
     objects = bpy.context.scene.collection.all_objects["world"].children
@@ -548,7 +549,7 @@ def render(
         triangulate_meshes()
 
         # if all objects are required (with light and stuffs) to export then uncomment below.. with use_selection=False in export below..
-        bpy.ops.object.select_all(action='DESELECT')
+        bpy.ops.object.select_all(action="DESELECT")
         for obj in objects:
             obj.select_set(True)
 
