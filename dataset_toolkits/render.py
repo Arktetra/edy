@@ -12,6 +12,7 @@ from .metadata.front_3d import RAW_DATA_DIR, PROCESSED_DATA_DIR
 SPHERE_RAIDUS = 2
 CAMERA_FOV_DEGREE = 40
 
+
 def handler(signal_received, frame):
     raise KeyboardInterrupt("SIGTERM received")
 
@@ -25,7 +26,7 @@ def _render(file_path, num_views):
         yaws.append(y)
         pitchs.append(p)
     radius = [SPHERE_RAIDUS] * num_views
-    fov = [CAMERA_FOV_DEGREE / 180 * np.pi] * num_views 
+    fov = [CAMERA_FOV_DEGREE / 180 * np.pi] * num_views
     views = [{"yaw": y, "pitch": p, "radius": r, "fov": f} for y, p, r, f in zip(yaws, pitchs, radius, fov)]
 
     print("launching blender")
@@ -36,7 +37,7 @@ def _render(file_path, num_views):
         object_path=file_path,
         views=views,
         geo_mode=False,
-        save_mesh=False,
+        save_mesh=True,
         save_mask=True,
     )
 
@@ -56,8 +57,7 @@ if __name__ == "__main__":
     input_paths = list(RAW_DATA_DIR.glob("**/*"))
     # _render(input_paths[0], 2)
     with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
-        #     # executor.map(_render, input_paths, [args.num_views] * len(input_paths))
         try:
-            executor.map(_render, input_paths, [args.num_views] * len(input_paths), [args.save_mask] * len(input_paths))
+            executor.map(_render, input_paths, [args.num_views] * len(input_paths))
         except KeyboardInterrupt:
             print("Keyboard interrupt occurred.")
