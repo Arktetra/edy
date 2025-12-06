@@ -26,6 +26,14 @@ IMPORT_FUNCTIONS: Dict[str, Callable] = {
     "blend": bpy.ops.wm.append,
 }
 
+EXPORT_FUNCTIONS: Dict[str, Callable] = {
+    "ply": bpy.ops.wm.ply_export,
+    "obj": bpy.ops.wm.obj_export,
+    "glb": bpy.ops.export_scene.gltf,
+    "gltf": bpy.ops.export_scene.gltf,
+    "fbx": bpy.ops.export_scene.fbx
+}
+
 EXT = {"PNG": "png", "JPEG": "jpg", "OPEN_EXR": "exr", "TIFF": "tiff", "BMP": "bmp", "HDR": "hdr", "TARGA": "tga"}
 
 OUTPUT_RES_PER = 100 # render res size in percentage.. i.e 100%
@@ -544,6 +552,8 @@ def render(
         for obj in objects:
             obj.select_set(True)
 
+        export_function = EXPORT_FUNCTIONS["ply"]
+
         # filename is same as the object name
         ply_filename = object_path.name.split(".")[0]
-        bpy.ops.export_mesh.ply(filepath=output_dir / "models" / f"{ply_filename}.ply", use_selection=True)
+        export_function(filepath=output_dir / "models" / f"{ply_filename}.ply", use_selection=True)
