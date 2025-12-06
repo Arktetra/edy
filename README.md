@@ -89,6 +89,10 @@ This also performs a kind of data augmentation. The above command renders the di
 |  |  |--3/
 |  |--1/
 ...
+|--models/
+|  |--0.ply
+|  |--1.ply
+...
 |--renders/
 |  |--0/
 |  |  |--0.png
