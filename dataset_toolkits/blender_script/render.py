@@ -5,8 +5,9 @@ import bpy
 from mathutils import Vector
 import numpy as np
 import json
+import sys
 
-from ..types import View
+from ..types import View, SceneProps
 
 
 """=============== BLENDER ==============="""
@@ -27,39 +28,55 @@ IMPORT_FUNCTIONS: Dict[str, Callable] = {
 
 EXT = {"PNG": "png", "JPEG": "jpg", "OPEN_EXR": "exr", "TIFF": "tiff", "BMP": "bmp", "HDR": "hdr", "TARGA": "tga"}
 
-COLORS = {
-    0: (1.0, 0.0, 0.0, 1.0),
-    1: (0.5, 0.5, 0.0, 1.0),
-    2: (0.0, 1.0, 0.0, 1.0),
-    3: (0.0, 0.5, 0.5, 1.0),
-    4: (0.0, 0.0, 1.0, 1.0),
-    5: (0.0, 0.5, 1.0, 1.0),
-    6: (1.0, 0.5, 0.0, 1.0),
-    7: (1.0, 0.0, 0.5, 1.0),
-}
+OUTPUT_RES_PER = 100 # render res size in percentage.. i.e 100%
+IMAGE_FILE_FORMAT = "PNG"
+IMAGE_COLOR_MODE = "RGBA"
+RENDER_SAMPLE_COUNT_NORMAL = 128 # this is the total sample taken for single image render (in cycles)
+RENDER_SAMPLE_COUNT_FALLBACK = 1
 
+def init_render(engine="CYCLES", resolution=512, geo_mode=False) -> None:
+    """
+    Initialize the blender settings for engine, images, cycle properties for render setup 
+    
+    Returns:
+        None
+    """
+    # temporary references.. for easy access
+    active_context = bpy.context
+    active_render = active_context.scene.render
 
-def init_render(engine="CYCLES", resolution=512, geo_mode=False):
-    bpy.context.scene.render.engine = engine
-    bpy.context.scene.render.resolution_x = resolution
-    bpy.context.scene.render.resolution_y = resolution
-    bpy.context.scene.render.resolution_percentage = 100
-    bpy.context.scene.render.image_settings.file_format = "PNG"
-    bpy.context.scene.render.image_settings.color_mode = "RGBA"
-    bpy.context.scene.render.film_transparent = True
+    active_render.engine = engine
+    active_render.resolution_x = resolution
+    active_render.resolution_y = resolution
+    active_render.resolution_percentage = OUTPUT_RES_PER
+    active_render.image_settings.file_format = IMAGE_FILE_FORMAT
+    active_render.image_settings.color_mode = IMAGE_COLOR_MODE
+    active_render.film_transparent = True
 
-    bpy.context.scene.cycles.device = "GPU"
-    bpy.context.scene.cycles.samples = 128 if not geo_mode else 1
-    bpy.context.scene.cycles.pixel_filter_type = "BOX"
-    bpy.context.scene.cycles.filter_width = 1
-    bpy.context.scene.cycles.diffuse_bounces = 1
-    bpy.context.scene.cycles.glossy_bounces = 1
-    bpy.context.scene.cycles.transparent_max_bounces = 3 if not geo_mode else 0
-    bpy.context.scene.cycles.transmission_bounces = 3 if not geo_mode else 1
-    bpy.context.scene.cycles.use_denoising = True
+    engine_cycle = active_context.scene.cycles
 
-    bpy.context.preferences.addons["cycles"].preferences.get_devices()
-    bpy.context.preferences.addons["cycles"].preferences.compute_device_type = "CUDA"
+    engine_cycle.device = "GPU" # this might cause the problem if the device doesn't have GPU listed/available to choose
+    engine_cycle.samples = RENDER_SAMPLE_COUNT_NORMAL if not geo_mode else RENDER_SAMPLE_COUNT_FALLBACK
+    engine_cycle.pixel_filter_type = "BOX"
+    engine_cycle.filter_width = 1
+    # this are the light bounces setting in cycles with hard coded values..
+    engine_cycle.diffuse_bounces = 1
+    engine_cycle.glossy_bounces = 1
+    engine_cycle.transparent_max_bounces = 3 if not geo_mode else 0
+    engine_cycle.transmission_bounces = 3 if not geo_mode else 1
+    engine_cycle.use_denoising = True
+
+    active_context.preferences.addons["cycles"].preferences.get_devices()
+
+    comp_device = "NONE"
+    if sys.platform == 'darwin':
+        comp_device = "METAL"
+    elif sys.platform.startswith('linux') or sys.platform == 'win32':
+        comp_device = "CUDA"
+    else:
+        print(f"Unknown platform so fallback to NONE for {sys.platform}")
+
+    active_context.preferences.addons["cycles"].preferences.compute_device_type = comp_device
 
 
 def init_scene() -> None:
@@ -86,46 +103,60 @@ def init_scene() -> None:
 
 
 def init_camera():
+    active_context = bpy.context
+
     cam = bpy.data.objects.new("Camera", bpy.data.cameras.new("Camera"))
-    bpy.context.collection.objects.link(cam)
-    bpy.context.scene.camera = cam
+    active_context.collection.objects.link(cam)
+    active_context.scene.camera = cam
     cam.data.sensor_height = cam.data.sensor_width = 32
+
+    # create constraint to look at for camera
     cam_constraint = cam.constraints.new(type="TRACK_TO")
     cam_constraint.track_axis = "TRACK_NEGATIVE_Z"
     cam_constraint.up_axis = "UP_Y"
+
+    # this is the empty target that camera will focus with above constrain
     cam_empty = bpy.data.objects.new("Empty", None)
-    cam_empty.location = (0, 0, 0)
-    bpy.context.scene.collection.objects.link(cam_empty)
+    cam_empty.location = (0, 0, 0) # assuming that the scene is fixed at the center/origin point.
+    active_context.scene.collection.objects.link(cam_empty)
     cam_constraint.target = cam_empty
+
     return cam
 
 
 def init_lighting():
-    # Clear existing lights
+    # Clear existing lights, might not be necessary as all object are cleared in init_scene(), but just to be sure.. clearing the lights
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.select_by_type(type="LIGHT")
     bpy.ops.object.delete()
 
+    active_collection = bpy.context.collection
+    area_light_energy = 10000
+    area_light_scale = (100, 100, 100)
+    area_light_location = (0, 0, 10)
+
     # Create key light
     default_light = bpy.data.objects.new("Default_Light", bpy.data.lights.new("Default_Light", type="POINT"))
-    bpy.context.collection.objects.link(default_light)
+    active_collection.objects.link(default_light)
     default_light.data.energy = 1000
     default_light.location = (4, 1, 6)
     default_light.rotation_euler = (0, 0, 0)
 
     # create top light
     top_light = bpy.data.objects.new("Top_Light", bpy.data.lights.new("Top_Light", type="AREA"))
-    bpy.context.collection.objects.link(top_light)
-    top_light.data.energy = 10000
-    top_light.location = (0, 0, 10)
-    top_light.scale = (100, 100, 100)
+    active_collection.objects.link(top_light)
+    top_light.data.energy = area_light_energy
+    top_light.location = area_light_location
+    top_light.rotation_euler = (0, 0, 0)
+    top_light.scale = area_light_scale
 
     # create bottom light
     bottom_light = bpy.data.objects.new("Bottom_Light", bpy.data.lights.new("Bottom_Light", type="AREA"))
-    bpy.context.collection.objects.link(bottom_light)
-    bottom_light.data.energy = 1000
-    bottom_light.location = (0, 0, -10)
-    bottom_light.rotation_euler = (0, 0, 0)
+    active_collection.objects.link(bottom_light)
+    bottom_light.data.energy = area_light_energy
+    bottom_light.location = area_light_location * -1 # place exactly opposite to the top light
+    bottom_light.scale = area_light_scale
+    bottom_light.rotation_euler = (np.pi, 0, 0) # creating the bottom light facing to origin
 
     return {"default_light": default_light, "top_light": top_light, "bottom_light": bottom_light}
 
@@ -342,6 +373,34 @@ def get_transform_matrix(obj: bpy.types.Object) -> list:
     matrix.append([0, 0, 0, 1])
     return matrix
 
+# emission node creating helper function
+def create_emi_mat(name, color=255, strength=1):
+    emi_mat = bpy.data.materials.new(name=name)
+    emi_mat.use_nodes = True
+
+    # Clear existing nodes for a clean slate
+    if emi_mat.node_tree:
+        emi_mat.node_tree.links.clear()
+        emi_mat.node_tree.nodes.clear()
+
+    nodes = emi_mat.node_tree.nodes
+    links = emi_mat.node_tree.links
+
+    # Create output and emission nodes
+    output_node = nodes.new(type="ShaderNodeOutputMaterial")
+    emission_node = nodes.new(type="ShaderNodeEmission")
+
+    # Set emission color and strength, if not default to white, and 1
+    c = color / 255
+    colRGBA = (c, c, c, 1)
+    emission_node.inputs["Color"].default_value = colRGBA
+    emission_node.inputs["Strength"].default_value = strength
+
+    # Link emission output to material output surface
+    links.new(emission_node.outputs["Emission"], output_node.inputs["Surface"])
+
+    return emi_mat
+
 
 def render(
     output_dir: Path,
@@ -390,7 +449,26 @@ def render(
         "frames": [],
     }
 
+    # setting the background environment to black..
     bpy.data.worlds["World"].node_tree.nodes["Background"].inputs[0].default_value = (0, 0, 0, 1)
+
+    # keeping the track of the original materials for loaded object/scene
+    original_materials = {}
+    for obj in bpy.data.objects:
+        if obj.type == "MESH":
+            original_materials[obj.name] = []
+            for mat in obj.data.materials:
+                original_materials[obj.name].append(mat)
+
+    # this will be the override materials for mask rendering, i.e two emission (white & black)
+    mask_materials = {
+        "emission": create_emi_mat("emission"),
+        "default": create_emi_mat("def_emi", 0, 0)
+    }
+
+    # selecting the objects that are to be rendered (i.e inside world objects) & its count
+    objects = bpy.context.scene.collection.all_objects["world"].children
+    objects_count = len(objects)
 
     for i, view in enumerate(views):
         cam.location = (
@@ -416,80 +494,40 @@ def render(
         }
 
         if save_mask:
-            # override_material_emission()
-            objects = bpy.context.scene.collection.all_objects["world"].children
-
-            original_materials = {}
-            for obj in bpy.data.objects:
-                if obj.type == "MESH":
-                    original_materials[obj.name] = []
-                    for mat in obj.data.materials:
-                        original_materials[obj.name].append(mat)
-
             # disabling all the lights to render the mask case
             for light_key in scene_lights:
                 scene_lights[light_key].hide_render = True
 
-            # for each object mask generation iterating over objects count..
-            objects_count = len(objects)
+            # first clear all the material attached to the object to prepare for mask
+            for obj in objects:
+                obj.data.materials.clear()
 
-            # emission node creating helper
-            def create_emi_mat(name, color=255, strength=1):
-                emi_mat = bpy.data.materials.new(name=name)
-                emi_mat.use_nodes = True
-
-                # Clear existing nodes for a clean slate
-                if emi_mat.node_tree:
-                    emi_mat.node_tree.links.clear()
-                    emi_mat.node_tree.nodes.clear()
-
-                nodes = emi_mat.node_tree.nodes
-                links = emi_mat.node_tree.links
-
-                # Create output and emission nodes
-                output_node = nodes.new(type="ShaderNodeOutputMaterial")
-                emission_node = nodes.new(type="ShaderNodeEmission")
-
-                # Set emission color and strength, if not default to white, and 1
-                c = color / 255
-                colRGBA = (c, c, c, 1)
-                emission_node.inputs["Color"].default_value = colRGBA
-                emission_node.inputs["Strength"].default_value = strength
-
-                # Link emission output to material output surface
-                links.new(emission_node.outputs["Emission"], output_node.inputs["Surface"])
-
-                return emi_mat
-
-            # creating new emission mat for active object
-            emi_mat = create_emi_mat("emission")
-            def_mat = create_emi_mat("def_emi", 0, 0)  # this is for default material i.e other than active object..
-            
-            # for each object from the single view, set emission mat to active object and default to rest & render
+            # for each object from the single view, set emission mat to active object and default to rest
             for ind in range(objects_count):
+                # first setting all object materials to default..
                 for obj in objects:
-                    obj.active_material = def_mat
+                    obj.active_material = mask_materials["default"]
                     obj.visible_diffuse = True  # reset all to true..
 
                 # now set the material for mask case... (emission with ray visibility diffuse set to false)
                 active_obj = objects[ind]
-                active_obj.active_material = emi_mat
+                active_obj.active_material = mask_materials["emission"]
                 active_obj.visible_diffuse = False  # this is to ensure that light bounces doesn't occur..
 
-                # this path might require recheck/change
                 bpy.context.scene.render.filepath = str(output_dir / "masks" / object_path.stem / f"{i}/{ind}.png")
                 bpy.ops.render.render(write_still=True)
 
+            # now clear all the mask mat. attached to the object & set the original materials of objects
             for obj_name, mats in original_materials.items():
                 obj = bpy.data.objects.get(obj_name)
                 if obj and obj.type == "MESH":
-                    # Clear current materials
                     obj.data.materials.clear()
                     # Re-assign original materials
                     for mat in mats:
                         obj.data.materials.append(mat)
 
-            bpy.context.scene.view_layers["ViewLayer"].material_override = None
+            # this will only be useful if material override method.. is used before mask usage and required disabling for the original render.
+            # bpy.context.scene.view_layers["ViewLayer"].material_override = None
 
         to_export["frames"].append(metadata)
 
@@ -501,4 +539,11 @@ def render(
         convert_to_meshes()
         triangulate_meshes()
 
-        bpy.ops.export_mesh.ply(filepath=output_dir / "models" / "mesh.ply")
+        # if all objects are required (with light and stuffs) to export then uncomment below.. with use_selection=False in export below..
+        bpy.ops.object.select_all(action='DESELECT')
+        for obj in objects:
+            obj.select_set(True)
+
+        # filename is same as the object name
+        ply_filename = object_path.name.split(".")[0]
+        bpy.ops.export_mesh.ply(filepath=output_dir / "models" / f"{ply_filename}.ply", use_selection=True)
