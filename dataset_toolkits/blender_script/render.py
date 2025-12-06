@@ -31,7 +31,7 @@ EXPORT_FUNCTIONS: Dict[str, Callable] = {
     "obj": bpy.ops.wm.obj_export,
     "glb": bpy.ops.export_scene.gltf,
     "gltf": bpy.ops.export_scene.gltf,
-    "fbx": bpy.ops.export_scene.fbx
+    "fbx": bpy.ops.export_scene.fbx,
 }
 
 EXT = {"PNG": "png", "JPEG": "jpg", "OPEN_EXR": "exr", "TIFF": "tiff", "BMP": "bmp", "HDR": "hdr", "TARGA": "tga"}
@@ -556,5 +556,7 @@ def render(
         export_function = EXPORT_FUNCTIONS["ply"]
 
         # filename is same as the object name
-        ply_filename = object_path.name.split(".")[0]
-        export_function(filepath=output_dir / "models" / f"{ply_filename}.ply", use_selection=True)
+        # ply_filename = object_path.name.split(".")[0]
+        model_dir = output_dir / "models"
+        model_dir.mkdir(exist_ok=True)
+        export_function(filepath=str(model_dir / f"{object_path.stem}.ply"))
