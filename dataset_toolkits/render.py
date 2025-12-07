@@ -1,4 +1,4 @@
-from concurrent.futures import ProcessPoolExecutor
+# from concurrent.futures import ProcessPoolExecutor
 import argparse
 import signal
 import numpy as np
@@ -23,6 +23,7 @@ def _render(file_path, num_views):
     offset = (np.random.rand(), np.random.rand())
     for i in range(num_views):
         y, p = sphere_hammersley_sequence(i, num_views, offset)
+        # y, p = 0, np.pi / 180 * 20
         yaws.append(y)
         pitchs.append(p)
     radius = [SPHERE_RAIDUS] * num_views
@@ -55,9 +56,11 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, handler)
 
     input_paths = list(RAW_DATA_DIR.glob("**/*"))
-    # _render(input_paths[0], 2)
-    with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
-        try:
-            executor.map(_render, input_paths, [args.num_views] * len(input_paths))
-        except KeyboardInterrupt:
-            print("Keyboard interrupt occurred.")
+    for path in input_paths:
+        _render(path, 4)
+    # _render(Path(__file__).parents[1] / "temp" / "767.glb", 1)
+    # with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
+    #     try:
+    #         executor.map(_render, input_paths, [args.num_views] * len(input_paths))
+    #     except KeyboardInterrupt:
+    #         print("Keyboard interrupt occurred.")
