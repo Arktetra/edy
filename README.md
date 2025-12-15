@@ -75,7 +75,7 @@ python -m dataset_toolkits.render --num-views 4 --max-workers 2
 ```
 This also performs a kind of data augmentation. The above command renders the different views of the scene and the corresponding masks:
 ```
-.../edy/data/raw/processed/3D-FRONT/3D-FRONT-SCENE/
+.../edy/data/processed/EDY/
 |--masks/
 |  |--0/
 |  |  |--0/
@@ -100,6 +100,45 @@ This also performs a kind of data augmentation. The above command renders the di
 |  |  |--2.png
 |  |  |--3.png
 |  |--1/
+...
+```
+
+Finally, perform post processing on the mask and apply it on the rendered views.
+```bash
+python -m dataset_toolkits.mask_post_processing
+```
+The directory structure will then become like:
+```
+.../edy/data/processed/EDY/
+|--masked/
+|  |--0/
+|  |  |--0/
+|  |  |  |--0.png
+|  |  |  |--1.png
+|  |  |  |--2.png
+|  |  |  |--3.png
+|  |  |  |--4.png
+|  |  |--1/
+|  |  |--2/
+|  |  |--3/
+|  |--1/
+...
+|--masks/
+|--models/
+|--processed_masks/
+|  |--0/
+|  |  |--0/
+|  |  |  |--0.png
+|  |  |  |--1.png
+|  |  |  |--2.png
+|  |  |  |--3.png
+|  |  |  |--4.png
+|  |  |--1/
+|  |  |--2/
+|  |  |--3/
+|  |--1/
+...
+|--renders/
 ...
 ```
 
