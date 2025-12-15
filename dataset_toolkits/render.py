@@ -6,7 +6,8 @@ import numpy as np
 from pathlib import Path
 
 from .blender_script.render import render
-from .metadata.front_3d import RAW_DATA_DIR, PROCESSED_DATA_DIR
+from .metadata.edy import PROCESSED_DATA_DIR
+from .metadata.front_3d import RAW_DATA_DIR
 
 SPHERE_RAIDUS = 2
 CAMERA_FOV_DEGREE = 40
