@@ -16,10 +16,14 @@ dependencies = [
     "triton>=3.5.1",
     "bpy>=5.0.0",
     # "mathutils>=3.3.0",
+    "jupyterlab>=4.5.1",
+    "safetensors>=0.7.0",
+    "utils3d>=0.1.0",
 ]
 
 [dependency-groups]
 dev = [
+    "nvitop>=1.6.1",
     "pre-commit>=4.5.0",
 ]
 
