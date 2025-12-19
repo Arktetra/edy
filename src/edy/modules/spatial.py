@@ -2,10 +2,8 @@ import torch
 
 from jaxtyping import Float
 
-def pixel_shuffle_3d(
-    x: Float[torch.Tensor, "B C D H W"],
-    scale_factor: int
-) -> Float[torch.Tensor, "B C H W D"]:
+
+def pixel_shuffle_3d(x: Float[torch.Tensor, "B C D H W"], scale_factor: int) -> Float[torch.Tensor, "B C H W D"]:
     """
     Perform 3D version of a pixel shuffle (subpixel upsampling) operation.
 
@@ -17,11 +15,17 @@ def pixel_shuffle_3d(
             D, H, W = spatial dimensions
         scale_factor (int): factor by which each spatial dimension is increased.
     """
-    raise NotImplementedError("Implement Me!")
+    B, C, H, W, D = x.shape
+    C_ = C // scale_factor**3
+    x = x.reshape(B, C_, scale_factor, scale_factor, scale_factor, H, W, D)
+    x = x.permute(0, 1, 5, 2, 6, 3, 7, 4)
+    x = x.reshape(B, C_, H * scale_factor, W * scale_factor, D * scale_factor)
+    return x
+
 
 def patchify(
     x: Float[torch.Tensor, "B C D H W"],
-    p: int  # patch size
+    p: int,  # patch size
 ) -> Float[torch.Tensor, "B C*(p**3) D//p H//p W//p"]:
     """
     Split a tensor into non-overlapping patches, by subdividing each spatial dimension into blocks of size `p`, and then re-encoding those patches into the channel dimension.
@@ -39,6 +43,7 @@ def patchify(
         torch.Tensor: a tensor of shape (B, C*(p**3), D//p, H//p, W//p)
     """
     raise NotImplementedError("Implement Me!")
+
 
 def unpatchify(
     x: Float[torch.Tensor, "B C D H W"],
