@@ -5,6 +5,7 @@
 **/*.venv
 **/*.lock
 **/*.env
+**/*ckpts
 **/*notebooks
 
 data/

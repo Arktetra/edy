@@ -1,4 +1,7 @@
+from pathlib import Path
+from safetensors.torch import load_model
 from typing import List, Optional, Tuple
+import huggingface_hub
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -21,11 +24,10 @@ class ResBlock3d(nn.Module):
         self.norm1 = LayerNorm32(self.channels)
         self.norm2 = LayerNorm32(self.out_channels)
         self.conv1 = nn.Conv3d(self.channels, self.out_channels, 3, padding=1)
-        self.conv2 = zero_module(
-            nn.Conv3d(self.out_channels, self.out_channels, 3, padding=1)
+        self.conv2 = zero_module(nn.Conv3d(self.out_channels, self.out_channels, 3, padding=1))
+        self.skip_connection = (
+            nn.Conv3d(self.channels, self.out_channels, 1) if channels != self.out_channels else nn.Identity()
         )
-        self.skip_connection = nn.Conv3d(self.channels, self.out_channels, 1) if channels != self.out_channels else nn.Identity()
-
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         h = self.norm1(x)
@@ -36,6 +38,7 @@ class ResBlock3d(nn.Module):
         h = self.conv2(h)
         h = h + self.skip_connection(x)
         return h
+
 
 class DownsampleBlock3d(nn.Module):
     def __init__(
@@ -57,27 +60,23 @@ class DownsampleBlock3d(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.conv(x)
 
+
 class UpSampleBlock3d(nn.Module):
     def __init__(
         self,
         in_channels: int,
         out_channels: int,
     ):
-
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
 
-        self.conv = nn.Conv3d(
-            in_channels,
-            out_channels,
-            kernel_size=3,
-            padding=1
-        )
+        self.conv = nn.Conv3d(in_channels, out_channels, kernel_size=3, padding=1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv(x)
         return pixel_shuffle_3d(x, 2)
+
 
 class SparseStructureEncoder(nn.Module):
     """
@@ -91,6 +90,7 @@ class SparseStructureEncoder(nn.Module):
         num_res_blocks_middle (int): Number of residual blocks in the middle.
         use_fp16 (bool): Whether to use FP16.
     """
+
     def __init__(
         self,
         in_channels: int,
@@ -109,40 +109,24 @@ class SparseStructureEncoder(nn.Module):
         self.use_fp16 = use_fp16
         self.dtype = torch.float16 if use_fp16 else torch.float32
 
-        self.input_layer = nn.Conv3d(
-            in_channels, 
-            out_channels=channels[0], 
-            kernel_size=3, 
-            padding=1
-        )
+        self.input_layer = nn.Conv3d(in_channels, out_channels=channels[0], kernel_size=3, padding=1)
 
         self.blocks = nn.ModuleList([])
 
         for i, channel in enumerate(channels):
-            self.blocks.extend([
-                ResBlock3d(channel, channel)
-                for _ in range(num_res_blocks)
-            ])
+            self.blocks.extend([ResBlock3d(channel, channel) for _ in range(num_res_blocks)])
             if i < len(channels) - 1:
-                self.blocks.append(
-                    DownsampleBlock3d(channel, channels[i + 1])
-                )
+                self.blocks.append(DownsampleBlock3d(channel, channels[i + 1]))
 
-        self.middle_block = nn.Sequential(*[
-            ResBlock3d(channels[-1], channels[-1])
-            for _ in range(num_res_blocks_middle)
-        ])
+        self.middle_block = nn.Sequential(
+            *[ResBlock3d(channels[-1], channels[-1]) for _ in range(num_res_blocks_middle)]
+        )
 
         self.out_layer = nn.Sequential(
             LayerNorm32(channels[-1]),
             nn.SiLU(),
-            nn.Conv3d(
-                in_channels=channels[-1],
-                out_channels=latent_channels * 2,
-                kernel_size=3,
-                padding=1
-            )
-        )       
+            nn.Conv3d(in_channels=channels[-1], out_channels=latent_channels * 2, kernel_size=3, padding=1),
+        )
 
         if use_fp16:
             self.convert_to_fp16()
@@ -172,6 +156,30 @@ class SparseStructureEncoder(nn.Module):
         self.blocks.apply(convert_module_to_f32)
         self.middle_block.apply(convert_module_to_f32)
 
+    @staticmethod
+    def from_pretrained() -> "SparseStructureEncoder":
+        # print(Path(__file__).parents[3])
+        ckpt_path = "ckpts/ss_enc_conv3d_16l8_fp16.safetensors"
+        huggingface_hub.hf_hub_download(
+            repo_id="haoningwu/SceneGen",
+            repo_type="model",
+            filename=ckpt_path,
+            local_dir=Path(__file__).parents[3],
+        )
+
+        model = SparseStructureEncoder(
+            in_channels=1,
+            latent_channels=8,
+            num_res_blocks=2,
+            num_res_blocks_middle=2,
+            channels=[32, 128, 512],
+            use_fp16=True,
+        )
+
+        load_model(model, Path(__file__).parents[3] / ckpt_path, strict=True)
+
+        return model
+
     def forward(
         self, x: torch.Tensor, sample_posterior: bool = False, return_raw: bool = False
     ) -> torch.Tensor | Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -195,8 +203,9 @@ class SparseStructureEncoder(nn.Module):
 
         if return_raw:
             return z, mean, logvar
-        
+
         return z
+
 
 class SparseStructureDecoder(nn.Module):
     """
@@ -210,6 +219,7 @@ class SparseStructureDecoder(nn.Module):
         num_res_blocks_middle (int): Number of residual blocks in the middle.
         use_fp16 (bool): Whether to use FP16.
     """
+
     def __init__(
         self,
         out_channels: int,
@@ -235,33 +245,20 @@ class SparseStructureDecoder(nn.Module):
             padding=1,
         )
 
-        self.middle_block = nn.Sequential(*[
-            ResBlock3d(channels[0], channels[0])
-            for _ in range(num_res_blocks_middle)
-        ])
+        self.middle_block = nn.Sequential(*[ResBlock3d(channels[0], channels[0]) for _ in range(num_res_blocks_middle)])
 
         self.blocks = nn.ModuleList([])
 
         for i, channel in enumerate(channels):
-            self.blocks.extend([
-                ResBlock3d(channel, channel)
-                for _ in range(num_res_blocks)
-            ])
+            self.blocks.extend([ResBlock3d(channel, channel) for _ in range(num_res_blocks)])
 
             if i < len(channels) - 1:
-                self.blocks.append(
-                    UpSampleBlock3d(channel, channels[i + 1])
-                )
+                self.blocks.append(UpSampleBlock3d(channel, channels[i + 1]))
 
         self.out_layer = nn.Sequential(
             LayerNorm32(channels[-1]),
             nn.SiLU(),
-            nn.Conv3d(
-                in_channels=channels[-1],
-                out_channels=out_channels,
-                kernel_size=3,
-                padding=1
-            )
+            nn.Conv3d(in_channels=channels[-1], out_channels=out_channels, kernel_size=3, padding=1),
         )
 
         if use_fp16:
@@ -273,7 +270,7 @@ class SparseStructureDecoder(nn.Module):
         Return the device of the model.
         """
         return next(self.parameters()).device
-    
+
     def convert_to_fp16(self) -> None:
         """
         Convert the torso of the model to float16.
