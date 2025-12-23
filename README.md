@@ -20,6 +20,20 @@ git clone https://github.com/Arktetra/edy # for specific branch use -b <branch_n
 pip install -e .
 ```
 
+Some dependencies need to be installed manually:
+
+```bash
+git clone https://github.com/JeffreyXiang/FlexGEMM.git
+cd FlexGEMM
+pip install . --no-build-isolation
+cd ..
+git clone https://github.com/Dao-AILab/flash-attention.git
+cd flash-attention
+MAX_JOBS=4 pip install . --no-build-isolation
+cd ..
+pip install ./extensions/vox2seq --no-build-isolation
+```
+
 - For enforcing consistency
 ```bash
 pre-commit install
@@ -142,4 +156,4 @@ The directory structure will then become like:
 ...
 ```
 
-**Note:** Only the partaa of the dataset is downloaded.
+**Note:** Only the test scene of the dataset is downloaded.
