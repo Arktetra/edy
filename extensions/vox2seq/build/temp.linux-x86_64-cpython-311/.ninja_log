@@ -1,0 +1,5 @@
+# ninja log v7
+1	7067	1766461111551992091	/home/arktetra/Codes/Projects/edy/extensions/vox2seq/build/temp.linux-x86_64-cpython-311/src/hilbert.o	ef8d8cad0e027c62
+1	7070	1766461111552275410	/home/arktetra/Codes/Projects/edy/extensions/vox2seq/build/temp.linux-x86_64-cpython-311/src/z_order.o	6d85cde7c8eb761a
+1	54508	1766461111551775490	/home/arktetra/Codes/Projects/edy/extensions/vox2seq/build/temp.linux-x86_64-cpython-311/src/ext.o	1c24278c3e635f6a
+1	81172	1766461111551082826	/home/arktetra/Codes/Projects/edy/extensions/vox2seq/build/temp.linux-x86_64-cpython-311/src/api.o	ec92e26b601da32d
