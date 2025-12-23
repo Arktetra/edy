@@ -6,7 +6,6 @@ dependencies = [
     "numpy",
     "matplotlib",
     "torch",
-    "spconv",
     "jaxtyping>=0.3.3",
     "tqdm",
     "pandas",
@@ -14,17 +13,23 @@ dependencies = [
     "huggingface-hub[cli]>=1.1.5",
     "hf-transfer>=0.1.9",
     "triton>=3.5.1",
-    "bpy>=5.0.0",
     # "mathutils>=3.3.0",
     "jupyterlab>=4.5.1",
     "safetensors>=0.7.0",
-    "utils3d>=0.1.0",
+    "utils3d",
+    "easydict>=1.13",
+    "flash-attn",
 ]
 
 [dependency-groups]
 dev = [
     "nvitop>=1.6.1",
     "pre-commit>=4.5.0",
+    "jupyterlab"
+]
+
+dataset = [
+    "bpy>=5.0.0",
 ]
 
 [project.urls]
@@ -44,6 +49,8 @@ url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 torch = [
     { index = "pytorch-cuda" }
 ]
+utils3d = { git = "https://github.com/EasternJournalist/utils3d.git", rev = "9a4eb15e4021b67b12c460c7057d642626897ec8" }
+flash-attn = { url = "https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3+cu12torch2.4cxx11abiTRUE-cp311-cp311-linux_x86_64.whl" }
 
 [tool.ruff]
 line-length = 120
