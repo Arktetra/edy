@@ -1,4 +1,3 @@
-
 from typing import Literal, Optional, Tuple
 from torch import nn
 
@@ -6,28 +5,63 @@ import torch
 from torch.utils.checkpoint import checkpoint
 
 from edy.modules.attention.mha import MultiHeadAttention
+from edy.modules.norm import LayerNorm32
+
 
 class AbsolutePositionEmbedder(nn.Module):
     """
     Creates absolute position embedding from spatial positions.
     """
+
     def __init__(self, channels: int, in_channels: int = 3):
         super().__init__()
-        raise NotImplementedError("implement me!")
+        self.channels = channels
+        self.in_channels = in_channels
+        self.freq_dim = channels // in_channels // 2
+        self.freqs = torch.arange(self.freq_dim, dtype=torch.float32) / self.freq_dim
+        self.freqs = 1.0 / (10000**self.freqs)
 
     def _sin_cos_embedding(self, x: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError("implement me!")
+        """
+        Create sinusoidal position embeddings.
+
+        Args:
+            x: a 1-D Tensor of N indices
+
+        Returns:
+            an (N, D) Tensor of positional embeddings.
+        """
+        self.freqs = self.freqs.to(x.device)
+        out = torch.outer(x, self.freqs)
+        out = torch.cat([torch.sin(out), torch.cos(out)], dim=-1)
+        return out
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError("implement me!")
+        """
+        Args:
+            x (torch.Tensor): (N, D) tensor of spatial positions
+        """
+        N, D = x.shape
+        assert D == self.in_channels, "Input dimension must match number of input channels"
+        embed = self._sin_cos_embedding(x.reshape(-1))
+        embed = embed.reshape(N, -1)
+        if embed.shape[1] < self.channels:
+            embed = torch.cat([embed, torch.zeros(N, self.channels - embed.shape[1], device=embed.device)], dim=-1)
+        return embed
+
 
 class FFN(nn.Module):
     def __init__(self, channels: int, mlp_ratio: float = 4.0):
         super().__init__()
-        raise NotImplementedError("implement me!")
+        self.mlp = nn.Sequential(
+            nn.Linear(channels, int(channels * mlp_ratio)),
+            nn.GELU(approximate="tanh"),
+            nn.Linear(int(channels * mlp_ratio), channels),
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError("implement me!")
+        return self.mlp(x)
+
 
 class ModulatedTransformerBlock(nn.Module):
     def __init__(
@@ -47,9 +81,8 @@ class ModulatedTransformerBlock(nn.Module):
         super().__init__()
         self.use_checkpoint = use_checkpoint
         self.share_mod = share_mod
-        self.norm1 = nn.LayerNorm(channels, elementwise_affine=False, eps=1e-6)
-        self.norm2 = nn.LayerNorm(channels, elementwise_affine=False, eps=1e-6)
-
+        self.norm1 = LayerNorm32(channels, elementwise_affine=False, eps=1e-6)
+        self.norm2 = LayerNorm32(channels, elementwise_affine=False, eps=1e-6)
         self.attn = MultiHeadAttention(
             channels,
             num_heads=num_heads,
@@ -60,26 +93,38 @@ class ModulatedTransformerBlock(nn.Module):
             use_rope=use_rope,
             qk_rms_norm=qk_rms_norm,
         )
-
         self.mlp = FFN(
             channels,
             mlp_ratio=mlp_ratio,
         )
-
         if not share_mod:
-            self.adaLN_modulation = nn.Sequential(
-                nn.SiLU(),
-                nn.Linear(channels, 6 * channels, bias=True)
-            )
+            self.adaLN_modulation = nn.Sequential(nn.SiLU(), nn.Linear(channels, 6 * channels, bias=True))
 
     def _forward(self, x: torch.Tensor, mod: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError("implement me!")
+        if self.share_mod:
+            shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = mod.chunk(6, dim=1)
+        else:
+            mod = mod.to(torch.float16)
+            x = x.to(torch.float16)
+            shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = self.adaLN_modulation(mod).chunk(6, dim=1)
+        h = self.norm1(x)
+        h = h * (1 + scale_msa.unsqueeze(1)) + shift_msa.unsqueeze(1)
+        h = self.attn(h)
+        h = h * gate_msa.unsqueeze(1)
+        x = x + h
+        h = self.norm2(x)
+        h = h * (1 + scale_mlp.unsqueeze(1)) + shift_mlp.unsqueeze(1)
+        h = self.mlp(h)
+        h = h * gate_mlp.unsqueeze(1)
+        x = x + h
+        return x
 
     def forward(self, x: torch.Tensor, mod: torch.Tensor) -> torch.Tensor:
         if self.use_checkpoint:
             return checkpoint(self._forward, x, mod, use_reentrant=False)
         else:
             return self._forward(x, mod)
+
 
 class ModulatedTransformerCrossBlock(nn.Module):
     """
@@ -111,6 +156,7 @@ class ModulatedTransformerCrossBlock(nn.Module):
         global_heads (Optional[int]): number of heads to use in global attention. Required if `use_global` is `True`. defaults to `None`.
         num_register_tokens (int): number of learnable register tokens to append to the input sequence. defaults to `0`.
     """
+
     def __init__(
         self,
         channels: int,
@@ -136,13 +182,13 @@ class ModulatedTransformerCrossBlock(nn.Module):
         self.use_global = use_global
         self.num_register_tokens = num_register_tokens
 
-        self.norm1 = nn.LayerNorm(channels, elementwise_affine=False, eps=1e-6)
-        self.norm2 = nn.LayerNorm(channels, elementwise_affine=False, eps=1e-6)
-        self.norm3 = nn.LayerNorm(channels, elementwise_affine=False, eps=1e-6)
+        self.norm1 = LayerNorm32(channels, elementwise_affine=False, eps=1e-6)
+        self.norm2 = LayerNorm32(channels, elementwise_affine=True, eps=1e-6)
+        self.norm3 = LayerNorm32(channels, elementwise_affine=False, eps=1e-6)
         if use_global:
-            self.norm4 = nn.LayerNorm(ctx_channels, elementwise_affine=False, eps=1e-6)
-        
-        self.asset_self_attn = MultiHeadAttention(
+            self.norm4 = LayerNorm32(channels, elementwise_affine=True, eps=1e-6)
+            self.norm5 = LayerNorm32(ctx_channels, elementwise_affine=False, eps=1e-6)
+        self.self_attn = MultiHeadAttention(
             channels,
             num_heads=num_heads,
             type="self",
@@ -153,8 +199,7 @@ class ModulatedTransformerCrossBlock(nn.Module):
             use_rope=use_rope,
             qk_rms_norm=qk_rms_norm,
         )
-
-        self.asset_cross_attn = MultiHeadAttention(
+        self.cross_attn = MultiHeadAttention(
             channels,
             ctx_channels=ctx_channels,
             num_heads=num_heads,
@@ -163,8 +208,16 @@ class ModulatedTransformerCrossBlock(nn.Module):
             qkv_bias=qkv_bias,
             qk_rms_norm=qk_rms_norm_cross,
         )
-
         if use_global:
+            self.global_attn = MultiHeadAttention(
+                channels,
+                ctx_channels=ctx_channels,
+                num_heads=global_heads if global_heads is not None else num_heads,
+                type="global",
+                attn_mode="full",
+                qkv_bias=qkv_bias,
+                qk_rms_norm=qk_rms_norm_cross,
+            )
             self.global_cross_attn = MultiHeadAttention(
                 channels,
                 ctx_channels=ctx_channels,
@@ -174,10 +227,18 @@ class ModulatedTransformerCrossBlock(nn.Module):
                 qkv_bias=qkv_bias,
                 qk_rms_norm=qk_rms_norm_cross,
             )
-        
+
+            nn.init.xavier_uniform_(self.global_attn.to_out.weight, gain=1.0)
             nn.init.xavier_uniform_(self.global_cross_attn.to_out.weight, gain=1.0)
+
+            if self.global_attn.to_out.bias is not None:
+                nn.init.normal_(self.global_attn.to_out.bias, mean=0.0, std=0.2)
             if self.global_cross_attn.to_out.bias is not None:
                 nn.init.normal_(self.global_cross_attn.to_out.bias, mean=0.0, std=0.2)
+
+            nn.init.xavier_uniform_(self.global_attn.to_qkv.weight)
+            if self.global_attn.to_qkv.bias is not None:
+                nn.init.normal_(self.global_attn.to_qkv.bias, mean=0.0, std=0.2)
 
             nn.init.xavier_uniform_(self.global_cross_attn.to_q.weight)
             if self.global_cross_attn.to_q.bias is not None:
@@ -186,19 +247,16 @@ class ModulatedTransformerCrossBlock(nn.Module):
             if self.global_cross_attn.to_kv.bias is not None:
                 nn.init.constant_(self.global_cross_attn.to_kv.bias, 0.1)
 
-        self.mlp = FFN(channels, mlp_ratio=mlp_ratio)
-
+        self.mlp = FFN(
+            channels,
+            mlp_ratio=mlp_ratio,
+        )
         if not share_mod:
-            self.adaLN_modulation = nn.Sequential(
-                nn.SiLU(),
-                nn.Linear(channels, 6 * channels, bias=True)
-            )
+            self.adaLN_modulation = nn.Sequential(nn.SiLU(), nn.Linear(channels, 6 * channels, bias=True))
             if use_global:
-                self.adaLN_modulation_global = nn.Sequential(
-                    nn.SiLU(),
-                    nn.Linear(channels, 3 * channels, bias=True)
-                )
+                self.adaLN_modulation_global = nn.Sequential(nn.SiLU(), nn.Linear(channels, 3 * channels, bias=True))
 
+                # TODO: initialize adaLN_modulation_global
                 nn.init.normal_(self.adaLN_modulation_global[1].weight, mean=0.0, std=0.02)
                 if self.adaLN_modulation_global[1].bias is not None:
                     nn.init.normal_(self.adaLN_modulation_global[1].bias, mean=0.0, std=0.02)
@@ -210,36 +268,49 @@ class ModulatedTransformerCrossBlock(nn.Module):
             shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = self.adaLN_modulation(mod).chunk(6, dim=1)
             if self.use_global:
                 shift_msa_global, scale_msa_global, gate_msa_global = self.adaLN_modulation_global(mod).chunk(3, dim=1)
-       
+
         if self.use_global:
             context_scene = context[:, 1374:, :]
             context = context[:, :1374, :]
-            position_tokens = x[:, :self.num_register_tokens + 1, :]
-            x = x[:, self.num_register_tokens + 1:, :]
+            position_tokens = x[:, : self.num_register_tokens + 1, :]
+            x = x[:, self.num_register_tokens + 1 :, :]
 
         h = self.norm1(x)
         h = h * (1 + scale_msa.unsqueeze(1)) + shift_msa.unsqueeze(1)
-        h = self.asset_self_attn(h)
+        h = self.self_attn(h)
         h = h * gate_msa.unsqueeze(1)
         x = x + h
         h = self.norm2(x)
-        h = self.asset_cross_attn(h, context)
+        h = self.cross_attn(h, context)
         x = x + h
         if self.use_global:
             x = torch.cat([position_tokens, x], dim=1)
             context = torch.cat([context, context_scene], dim=1)
 
-            # implement AdaLN-Zero for Global Attention
-            # MHA part here
+            h = self.norm4(x)
+            h = h * (1 + scale_msa_global.unsqueeze(1)) + shift_msa_global.unsqueeze(1)
+            h = self.global_attn(h)
+            h = h * gate_msa_global.unsqueeze(1)
+            x = x + h
 
-            position_tokens = x[:, :self.num_register_tokens + 1, :]
-            x = x[:, self.num_register_tokens + 1:, :]
+            h = self.norm5(x)
+            h = self.global_cross_attn(h, context)
+            x = x + h
 
-            ## FFN part here
+            position_tokens = x[:, : self.num_register_tokens + 1, :]
+            x = x[:, self.num_register_tokens + 1 :, :]
+
+        h = self.norm3(x)
+        h = h * (1 + scale_mlp.unsqueeze(1)) + shift_mlp.unsqueeze(1)
+        h = self.mlp(h)
+        h = h * gate_mlp.unsqueeze(1)
+        x = x + h
+        if self.use_global:
+            x = torch.cat([position_tokens, x], dim=1)
+        return x
 
     def forward(self, x: torch.Tensor, mod: torch.Tensor, context: torch.Tensor):
         if self.use_checkpoint:
             return checkpoint(self._forward, x, mod, context, use_reentrant=False)
         else:
             return self._forward(x, mod, context)
-            
