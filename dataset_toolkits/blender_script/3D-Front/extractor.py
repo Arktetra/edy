@@ -51,6 +51,11 @@ if __name__ == "__main__":
     obj_exporter = bpy.ops.wm.ply_export
     exporter_ext_format = "ply" # for more flexible for sudden export format change..., warning: match the exporter and its extension
 
+    # create the folders for the transforms and objects before hand..
+    trans_out_dir = output_dir / "transforms"
+    obj_out_dir = output_dir / "objects"
+    os.makedirs(trans_out_dir)
+    os.makedirs(obj_out_dir)
         
     if at_once:
         # transform and object extraction simulataneously in single load..
@@ -66,20 +71,21 @@ if __name__ == "__main__":
             reset_all_obj_center()
 
             scene_prefix = scene_path.split(".")[0]
-            trans_path = str(output_dir / f"{scene_prefix}.json")
+            trans_path = str(trans_out_dir / f"{scene_prefix}.json")
             extract_scene_objs_transform(scene_objs, trans_path)
 
             move_objects(scene_objs)
-            export_obj_dir = Path(output_dir) / scene_prefix
+            export_obj_dir = obj_out_dir / scene_prefix
+            os.makedirs(export_obj_dir, exist_ok=True)
             export_scene_objs(scene_objs, export_obj_dir, obj_exporter, exporter_ext_format)
 
     # extract seperately otherwise
     else:
         if transforms:
             # extract_transforms()
-            extract_all_transforms(dataset_dir, scene_paths)
+            extract_all_transforms(dataset_dir, scene_paths, trans_out_dir, obj_importer)
             pass
         elif objects:
             # extract_objects()
-            export_all_objects(dataset_dir, scene_paths, output_dir, obj_importer, obj_exporter, exporter_ext_format)
+            export_all_objects(dataset_dir, scene_paths, obj_out_dir, obj_importer, obj_exporter, exporter_ext_format)
             pass

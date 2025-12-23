@@ -19,6 +19,8 @@ def extract_scene_objs_transform(scene_objs, trans_path):
 
 
 def extract_all_transforms(dir: Path, scene_paths, out_dir: Path, importer):
+    out_dir = out_dir / "transforms"
+
     for scene_path in scene_paths:
         # clear scene at start
         clear_scene()
