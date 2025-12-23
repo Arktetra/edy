@@ -10,25 +10,25 @@ FP16_MODULES = (
     nn.ConvTranspose3d,
     nn.Linear,
     sp.SparseConv3d,
-    sp.SparseInverseConv3d,
     sp.SparseLinear,
 )
 
-def convert_module_to_f16(l):
+
+def convert_module_to_f16(module):
     """
     Convert primitive modules to float16.
     """
-    if isinstance(l, FP16_MODULES):
-        for p in l.parameters():
+    if isinstance(module, FP16_MODULES):
+        for p in module.parameters():
             p.data = p.data.half()
 
 
-def convert_module_to_f32(l):
+def convert_module_to_f32(module):
     """
     Convert primitive modules to float32, undoing convert_module_to_f16().
     """
-    if isinstance(l, FP16_MODULES):
-        for p in l.parameters():
+    if isinstance(module, FP16_MODULES):
+        for p in module.parameters():
             p.data = p.data.float()
 
 
