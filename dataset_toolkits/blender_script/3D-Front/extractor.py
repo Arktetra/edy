@@ -20,10 +20,10 @@ if __name__ == "__main__":
     parser.add_argument("--output-dir", type=str, default=str(cwd / "output"), help="Where the output will be saved")
     parser.add_argument("--ds-filter-ext", nargs='+', default=["glb"], help="dataset extension format which should only be taken from dataset folder")
 
-    parser.add_argument("--objects", type=bool, default=False, help="Should extract objects?")
-    parser.add_argument("--transforms", type=bool, default=False, help="Should extract objects transform info?")
-    parser.add_argument("--at-once", type=bool, default=False, help="Should extract transform and object at single load? or seperately.")
-    parser.add_argument("--all", type=bool, default=False, help="Extract all the available infos?")
+    parser.add_argument("--objects", action='store_true', help="Should extract objects?")
+    parser.add_argument("--transforms", action='store_true', help="Should extract objects transform info?")
+    parser.add_argument("--at-once", action='store_true', help="Should extract transform and object at single load? or seperately.")
+    parser.add_argument("--all", action='store_true', help="Extract all the available infos?")
 
     args = parser.parse_args()
 
