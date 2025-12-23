@@ -2,8 +2,8 @@
 # and extract respective object in ply format as well..
 
 from .utils import *
-from transforms import *
-from objects import *
+from .transforms import *
+from .objects import *
 
 import argparse
 import os
