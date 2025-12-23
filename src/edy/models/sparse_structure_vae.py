@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from edy.modules.norm import LayerNorm32
+from edy.modules.norm import ChannelLayerNorm32
 from edy.modules.spatial import pixel_shuffle_3d
 from edy.modules.utils import convert_module_to_f16, convert_module_to_f32, zero_module
 
@@ -21,8 +21,8 @@ class ResBlock3d(nn.Module):
         self.channels = channels
         self.out_channels = out_channels or channels
 
-        self.norm1 = LayerNorm32(self.channels)
-        self.norm2 = LayerNorm32(self.out_channels)
+        self.norm1 = ChannelLayerNorm32(self.channels)
+        self.norm2 = ChannelLayerNorm32(self.out_channels)
         self.conv1 = nn.Conv3d(self.channels, self.out_channels, 3, padding=1)
         self.conv2 = zero_module(nn.Conv3d(self.out_channels, self.out_channels, 3, padding=1))
         self.skip_connection = (
@@ -71,7 +71,7 @@ class UpSampleBlock3d(nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
 
-        self.conv = nn.Conv3d(in_channels, out_channels, kernel_size=3, padding=1)
+        self.conv = nn.Conv3d(in_channels, out_channels * 8, kernel_size=3, padding=1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv(x)
@@ -123,7 +123,7 @@ class SparseStructureEncoder(nn.Module):
         )
 
         self.out_layer = nn.Sequential(
-            LayerNorm32(channels[-1]),
+            ChannelLayerNorm32(channels[-1]),
             nn.SiLU(),
             nn.Conv3d(in_channels=channels[-1], out_channels=latent_channels * 2, kernel_size=3, padding=1),
         )
@@ -256,7 +256,7 @@ class SparseStructureDecoder(nn.Module):
                 self.blocks.append(UpSampleBlock3d(channel, channels[i + 1]))
 
         self.out_layer = nn.Sequential(
-            LayerNorm32(channels[-1]),
+            ChannelLayerNorm32(channels[-1]),
             nn.SiLU(),
             nn.Conv3d(in_channels=channels[-1], out_channels=out_channels, kernel_size=3, padding=1),
         )
@@ -288,6 +288,30 @@ class SparseStructureDecoder(nn.Module):
         self.dtype = torch.float32
         self.blocks.apply(convert_module_to_f32)
         self.middle_block.apply(convert_module_to_f32)
+
+    @staticmethod
+    def from_pretrained() -> "SparseStructureDecoder":
+        # print(Path(__file__).parents[3])
+        ckpt_path = "ckpts/ss_dec_conv3d_16l8_fp16.safetensors"
+        huggingface_hub.hf_hub_download(
+            repo_id="haoningwu/SceneGen",
+            repo_type="model",
+            filename=ckpt_path,
+            local_dir=Path(__file__).parents[3],
+        )
+
+        model = SparseStructureDecoder(
+            out_channels=1,
+            latent_channels=8,
+            num_res_blocks=2,
+            num_res_blocks_middle=2,
+            channels=[512, 128, 32],
+            use_fp16=True,
+        )
+
+        load_model(model, Path(__file__).parents[3] / ckpt_path, strict=True)
+
+        return model
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         h = self.input_layer(x)
