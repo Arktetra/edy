@@ -1,9 +1,9 @@
-from edy.modules.sparse.conv.conv import SparseConv3d, SparseInverseConv3d
+from edy.modules.sparse.conv.conv import SparseConv3d
 from edy.modules.sparse.linear import SparseLinear
 from edy.modules.sparse.spatial import SparseDownSample, SparseUpSample
 from edy.modules.sparse.tensor import SparseTensor
 
-__all__ = ["SparseTensor", "SparseConv3d", "SparseInverseConv3d", "SparseLinear", "SparseDownSample", "SparseUpSample"]
+__all__ = ["SparseTensor", "SparseConv3d", "SparseLinear", "SparseDownSample", "SparseUpSample"]
 
 DEBUG = False  # 'auto', 'implicit_gemm', 'native'
 
