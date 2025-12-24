@@ -19,13 +19,16 @@ dependencies = [
     "utils3d",
     "easydict>=1.13",
     "flash-attn",
+    "torchvision>=0.24.1",
+    "trimesh>=4.10.1",
 ]
 
 [dependency-groups]
 dev = [
     "nvitop>=1.6.1",
     "pre-commit>=4.5.0",
-    "jupyterlab"
+    "jupyterlab",
+    "rich>=14.2.0",
 ]
 
 dataset = [
@@ -48,6 +51,9 @@ url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 [tool.uv.sources]
 torch = [
     { index = "pytorch-cuda" }
+]
+torchvision = [
+    { index = "pytorch-cuda"}
 ]
 utils3d = { git = "https://github.com/EasternJournalist/utils3d.git", rev = "9a4eb15e4021b67b12c460c7057d642626897ec8" }
 flash-attn = { url = "https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3+cu12torch2.4cxx11abiTRUE-cp311-cp311-linux_x86_64.whl" }
