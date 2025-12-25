@@ -1,10 +1,5 @@
+from edy.modules.sparse.attention.modules import SparseMultiHeadAttention, SparseMultiHeadRMSNorm
+from edy.modules.sparse.attention.serialized_attn import SerializeMode
 
 
-from edy.modules.sparse.attention.mha import SparseMultiHeadAttention, SparseMultiHeadRMSNorm
-
-
-
-__all__ = [
-    "SparseMultiHeadRMSNorm",
-    "SparseMultiHeadAttention"
-]
+__all__ = ["SparseMultiHeadRMSNorm", "SparseMultiHeadAttention", "SerializeMode"]

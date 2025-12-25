@@ -23,14 +23,20 @@ pip install -e .
 Some dependencies need to be installed manually:
 
 ```bash
+cd submodules
 git clone https://github.com/JeffreyXiang/FlexGEMM.git
 cd FlexGEMM
 pip install . --no-build-isolation
 cd ..
+git clone https://github.com/facebookresearch/vggt.git
+cd vggt
+pip install . --no-build-isolation
+cd ..
+cd ..
 git clone https://github.com/Dao-AILab/flash-attention.git
 cd flash-attention
 MAX_JOBS=4 pip install . --no-build-isolation
-cd ..
+cd ../..
 pip install ./extensions/vox2seq --no-build-isolation
 ```
 
