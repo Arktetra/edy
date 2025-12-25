@@ -2,6 +2,7 @@
 
 import bpy
 import json
+from ..render import normalize_scene
 
 def clear_scene():
     # choose this options
@@ -80,4 +81,13 @@ def json_wrapper(filepath: str, payload, indent=4):
     with open(filepath, "w") as nf:
         nf.write(json_str)
 
+
+def scene_setup():
+    """
+    for now normalizing the scene applying the all the transform
+    """
+    normalize_scene()
+    bpy.ops.object.select_all(action='SELECT')
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    bpy.ops.object.select_all(action="DESELECT")
 

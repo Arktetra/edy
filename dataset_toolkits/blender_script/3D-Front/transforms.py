@@ -28,9 +28,8 @@ def extract_all_transforms(dir: Path, scene_paths, out_dir: Path, importer):
 
         glb_path = dir / scene_path
         importer(filepath=str(glb_path), merge_vertices=True, import_shading="NORMALS")
+        scene_setup()
 
-        # scale and offset not used as of now..
-        scale, offset = normalize_scene()
         """ get hold of all the object in the scene.. inside world parent container..
             warning: this is specific to 3d front dataset only (test), where all the objects have world as parent
             -> world

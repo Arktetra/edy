@@ -66,9 +66,8 @@ if __name__ == "__main__":
 
             glb_path = dataset_dir / scene_path
             obj_importer(filepath=str(glb_path), merge_vertices=True, import_shading="NORMALS")
-
-            # scale and offset not used as of now..
-            scale, offset = normalize_scene()
+            scene_setup()
+            
             scene_objs = bpy.data.objects["world"].children
 
             reset_all_obj_center()
