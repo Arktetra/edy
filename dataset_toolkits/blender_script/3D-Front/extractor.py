@@ -4,7 +4,6 @@
 from .utils import *
 from .transforms import *
 from .objects import *
-from ..render import normalize_scene
 
 import argparse
 import os
@@ -67,7 +66,7 @@ if __name__ == "__main__":
             glb_path = dataset_dir / scene_path
             obj_importer(filepath=str(glb_path), merge_vertices=True, import_shading="NORMALS")
             scene_setup()
-            
+
             scene_objs = bpy.data.objects["world"].children
 
             reset_all_obj_center()

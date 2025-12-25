@@ -1,6 +1,5 @@
 from .utils import *
 from pathlib import Path
-from ..render import normalize_scene
 
 # other internal usages based..
 transform_precision = None

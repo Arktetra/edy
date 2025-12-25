@@ -1,7 +1,6 @@
 from .utils import *
 from pathlib import Path
 import os
-from ..render import normalize_scene
 
 def export_scene_objs(scene_objs, out_dir: Path, exporter, exp_ext):
 
