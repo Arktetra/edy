@@ -1,6 +1,7 @@
 from .utils import *
 from pathlib import Path
 import os
+from ..render import normalize_scene
 
 def export_scene_objs(scene_objs, out_dir: Path, exporter, exp_ext):
 
@@ -21,7 +22,7 @@ def export_all_objects(dir: Path, scene_paths, out_dir, importer, exporter, exp_
     for scene_path in scene_paths:
         glb_path = dir / scene_path
         importer(filepath=str(glb_path), merge_vertices=True, import_shading="NORMALS")
-
+        normalize_scene()
 
         """ get hold of all the object in the scene.. inside world parent container..
             warning: this is specific to 3d front dataset only (test), where all the objects have world as parent
