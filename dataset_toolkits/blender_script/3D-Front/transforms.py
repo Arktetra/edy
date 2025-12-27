@@ -27,6 +27,7 @@ def extract_all_transforms(dir: Path, scene_paths, out_dir: Path, importer):
 
         glb_path = dir / scene_path
         importer(filepath=str(glb_path), merge_vertices=True, import_shading="NORMALS")
+        scene_setup()
 
         """ get hold of all the object in the scene.. inside world parent container..
             warning: this is specific to 3d front dataset only (test), where all the objects have world as parent
@@ -37,7 +38,9 @@ def extract_all_transforms(dir: Path, scene_paths, out_dir: Path, importer):
         """
         scene_objs = bpy.data.objects["world"].children
 
-        reset_all_obj_center()
+        # reset_all_obj_center()
+        # currently using the bounding box center based approach..
+        reset_each_obj_center_bb(scene_objs)
 
         scene_prefix = scene_path.split(".")[0]
         trans_path = str(out_dir / f"{scene_prefix}.json")
