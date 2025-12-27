@@ -69,7 +69,9 @@ if __name__ == "__main__":
 
             scene_objs = bpy.data.objects["world"].children
 
-            reset_all_obj_center()
+            # reset_all_obj_center()
+            # currently using the bounding box center based approach..
+            reset_each_obj_center_bb(scene_objs)
 
             scene_prefix = scene_path.split(".")[0]
             trans_path = str(trans_out_dir / f"{scene_prefix}.json")

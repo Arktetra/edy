@@ -3,6 +3,10 @@
 import bpy
 import json
 from ..render import normalize_scene
+from mathutils import Vector
+from typing import Tuple
+import math
+
 
 def clear_scene():
     # choose this options
@@ -37,6 +41,37 @@ def clear_scene():
 def reset_all_obj_center(type='ORIGIN_CENTER_OF_MASS', center='MEDIAN'):
     bpy.ops.object.select_all(action='SELECT')
     bpy.ops.object.origin_set(type=type, center=center)
+
+def object_bbox(obj) -> Tuple[Vector, Vector]:
+    """Returns the bounding box of the object.
+
+        Tuple[Vector, Vector]: The minimum and maximum coordinates of the bounding box.
+        #note: stripped version of scene_bbox
+    """
+    bbox_min = (math.inf,) * 3
+    bbox_max = (-math.inf,) * 3
+    
+    for coord in obj.bound_box:
+        coord = Vector(coord)
+        coord = obj.matrix_world @ coord
+        bbox_min = tuple(min(x, y) for x, y in zip(bbox_min, coord))
+        bbox_max = tuple(max(x, y) for x, y in zip(bbox_max, coord))
+        
+    return Vector(bbox_min), Vector(bbox_max)
+
+
+def reset_each_obj_center_bb(scene_objs):
+
+    for obj in scene_objs:
+        bmin, bmax = object_bbox(obj)
+        # find the center location of the bounding box..
+        center = (bmax + bmin) / 2
+        # adjust the 3d cursor position to center of bb
+        bpy.context.scene.cursor.location = center
+        bpy.ops.object.select_all(action="DESELECT")
+        obj.select_set(True)
+        # finally set the object original to the 3D cursor origin (i.e center of bounding box...)
+        bpy.ops.object.origin_set(type='ORIGIN_CURSOR', center='MEDIAN')
 
 
 def move_objects(objs, loc = (0, 0, 0)):
