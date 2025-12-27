@@ -172,7 +172,7 @@ For extraction of the transform of each object in scene and each object seperate
 
 ```bash
 python -m dataset_toolkits.blender_script.3D-Front.extractor --at-once --dataset-dir <path-to-dataset> --output-dir <path-to-output>
-# eg: python -m dataset_toolkits.blender_script.3D-Front.extractor --at-once --dataset-dir /content/edy/dataset --output-dir /content/edy/data/ 
+# eg: python -m dataset_toolkits.blender_script.3D-Front.extractor --at-once --dataset-dir /content/edy/dataset --output-dir /content/edy/data/
 ```
 
 all available args:
@@ -180,7 +180,7 @@ value based
 - `--dataset-dir`: directory at which dataset resides
 - `--output-dir`: directory where extracted files will be stored
 - `--ds-filter-ext`: filter only given extension from dataset
-```bash 
+```bash
 ... --ds-filter-ext glb ply obj # this will only select files with glb, ply, obj extension from dataset folder
 ```
 
