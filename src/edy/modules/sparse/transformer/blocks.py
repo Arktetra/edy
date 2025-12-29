@@ -4,9 +4,9 @@ import torch.nn as nn
 
 from torch.utils.checkpoint import checkpoint
 
-from edy.modules.sparse.attention.mha import SparseMultiHeadAttention
+from edy.modules.norm import LayerNorm32
+from edy.modules.sparse.attention.modules import SparseMultiHeadAttention
 from edy.modules.sparse.attention.serialized_attn import SerializeMode
-from edy.modules.sparse.norm import SparseLayerNorm32
 from edy.modules.sparse.tensor import SparseTensor
 
 
@@ -18,8 +18,10 @@ class SparseFFN(nn.Module):
     def forward(self, x: SparseTensor) -> SparseTensor:
         raise NotImplementedError("Implement Me!")
 
+
 class ModulatedSparseTransformerCrossBlock(nn.Module):
     """Modulated Sparse Transformer Cross-Attention Block"""
+
     def __init__(
         self,
         channels: int,
@@ -71,10 +73,7 @@ class ModulatedSparseTransformerCrossBlock(nn.Module):
             mlp_ratio=mlp_ratio,
         )
         if not share_mod:
-            self.adaLN_modulation = nn.Sequential(
-                nn.SiLU(),
-                nn.Linear(channels, 6 * channels, bias=True)
-            )
+            self.adaLN_modulation = nn.Sequential(nn.SiLU(), nn.Linear(channels, 6 * channels, bias=True))
 
     def _forward(self, x: SparseTensor, context: torch.Tensor):
         raise NotImplementedError("Implement Me!")
@@ -84,4 +83,3 @@ class ModulatedSparseTransformerCrossBlock(nn.Module):
             return checkpoint(self._forward, x, context, use_reentrant=False)
         else:
             return self._forward(x, context)
-
