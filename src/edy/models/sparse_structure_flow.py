@@ -11,7 +11,11 @@ from jaxtyping import Int, Float
 
 from edy.modules.position_head import PositionHead
 from edy.modules.spatial import patchify, unpatchify
-from edy.modules.transformer.modulated import AbsolutePositionEmbedder, ModulatedTransformerCrossBlock
+from edy.modules.transformer.modulated import (
+    AbsolutePositionEmbedder,
+    ModulatedTransformerCrossBlock,
+    ModulatedTransformerCrossOnlyBlock,
+)
 from edy.modules.utils import convert_module_to_f16, convert_module_to_f32
 
 
@@ -181,9 +185,26 @@ class SparseStructureFlowModel(nn.Module):
                     for _ in range(num_blocks)
                 ]
             )
-        elif transformer_block_type == "CondModulated":
-            raise NotImplementedError("Implement Me!")
-            # TODO: implement condition modulated transformer block
+        elif transformer_block_type == "CrossOnly":
+            self.blocks = nn.ModuleList(
+                [
+                    ModulatedTransformerCrossOnlyBlock(
+                        model_channels,
+                        cond_channels,
+                        num_heads=self.num_heads,
+                        mlp_ratio=self.mlp_ratio,
+                        attn_mode="full",
+                        use_checkpoint=self.use_checkpoint,
+                        use_rope=(pe_mode == "rope"),
+                        share_mod=share_mod,
+                        qk_rms_norm=self.qk_rms_norm,
+                        qk_rms_norm_cross=self.qk_rms_norm_cross,
+                        use_global=self.use_global,
+                        num_register_tokens=self.num_register_tokens,
+                    )
+                    for _ in range(num_blocks)
+                ]
+            )
         else:
             raise ValueError("Unknown Transformer Block Type")
 
@@ -226,9 +247,38 @@ class SparseStructureFlowModel(nn.Module):
             )
 
             return model
-        elif transformer_block_type == "CondModulated":
-            # TODO: implement from_pretrained for condition modulated transformer block.
-            raise NotImplementedError("Implement Me!")
+        elif transformer_block_type == "CrossOnly":
+            ckpt_path = "ckpts/ss_scenegen_flow_img_dit_L_16l8_fp16.pt"
+            huggingface_hub.hf_hub_download(
+                repo_id="haoningwu/Scenegen", repo_type="model", filename=ckpt_path, local_dir=Path(__file__).parents[3]
+            )
+
+            model = SparseStructureFlowModel(
+                resolution=16,
+                in_channels=8,
+                out_channels=8,
+                model_channels=1024,
+                cond_channels=1024,
+                transformer_block_type="CrossOnly",
+                num_blocks=24,
+                mlp_ratio=4,
+                patch_size=1,
+                pe_mode="ape",
+                qk_rms_norm=True,
+                use_fp16=True,
+                use_checkpoint=False,
+                use_global=True,
+                trunk_depth=4,
+                num_iteration=4,
+                use_batch_encoder=False,
+            )
+
+            # load_model(model, Path(__file__).parents[3] / ckpt_path, strict=True)
+            model.load_state_dict(
+                torch.load(Path(__file__).parents[3] / ckpt_path, map_location=device, weights_only=True), strict=False
+            )
+
+            return model
         else:
             raise ValueError("Unknown Transformer Block Type")
 
@@ -287,7 +337,7 @@ class SparseStructureFlowModel(nn.Module):
         )
 
         h = patchify(x, self.patch_size)
-        h = h.view(*h.shape[:2], -1).permite(0, 2, 1).contiguous()
+        h = h.view(*h.shape[:2], -1).permute(0, 2, 1).contiguous()
 
         B, N, C = h.shape
 
