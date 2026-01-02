@@ -1,8 +1,24 @@
 from PIL import Image
+from pathlib import Path
+from dotenv import load_dotenv
+import os
 
 def seperator(symb = "-", count = 100):
     string = f"{symb}".join(["" for _ in range(0, count)])
     print(f"{string}") 
+
+
+def load_env_variables():
+    current_path = Path(__file__).resolve()
+    root = current_path.parent.parent
+
+    dotenv_path = root / ".env"
+
+    if os.path.exists(dotenv_path):
+        load_dotenv(dotenv_path=dotenv_path)
+        print(f"Loaded environment variables from: {dotenv_path}")
+    else:
+        print(f"Warning: .env file not found at {dotenv_path}. Ensure that it is in the project root")
 
 
 def get_masked_img(oimg: Image.Image, mimg: Image.Image | list, bg_color = (0, 0, 0, 0)):

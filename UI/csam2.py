@@ -5,8 +5,9 @@ import numpy as np
 from einops import rearrange
 import os
 
-from util import seperator
+from util import seperator, load_env_variables
 
+load_env_variables()
 token = os.environ["HF_TOKEN"]
 
 def_model = "facebook/sam2.1-hiera-tiny"
@@ -28,7 +29,7 @@ def get_mask(img: Image.Image, bboxs = None, points = None, model_name = def_mod
 
     print(f"Image dim: {img.size}, bounding box count: {bboxs.shape if isinstance(bboxs, np.ndarray) else 'not found'}")
 
-    if not token:
+    if token == None:
         return ValueError("HF token required for model access! Unable to load HF_TOKEN from .env file! Try again!")
 
     model = Sam2Model.from_pretrained(model_name, token=token).to(device)
