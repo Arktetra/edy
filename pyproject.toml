@@ -21,6 +21,8 @@ dependencies = [
     "flash-attn",
     "torchvision>=0.24.1",
     "trimesh>=4.10.1",
+    # "diffoctreerast",
+    # "nvdiffrast",
 ]
 
 [dependency-groups]
