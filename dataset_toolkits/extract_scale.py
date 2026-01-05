@@ -1,7 +1,7 @@
 import json
 import trimesh
 
-from dataset_toolkits.metadata.edy import OBJECTS_DATA_DIR, RAW_TRANSFORMS_DATA_DIR, TRANSFORMS_DATA_DIR
+from .metadata.edy import OBJECTS_DATA_DIR, RAW_TRANSFORMS_DATA_DIR, TRANSFORMS_DATA_DIR
 
 
 def get_scale(object_path):
