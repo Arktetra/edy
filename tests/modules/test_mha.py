@@ -1,6 +1,6 @@
 import torch
 
-from edy.modules.attention.mha import MultiHeadAttention
+from edy.modules.attention.modules import MultiHeadAttention
 
 
 class TestMultiHeadAttention:
