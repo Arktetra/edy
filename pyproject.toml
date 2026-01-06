@@ -16,7 +16,7 @@ dependencies = [
     # "mathutils>=3.3.0",
     "jupyterlab>=4.5.1",
     "safetensors>=0.7.0",
-    "utils3d",
+    # "utils3d",
     "easydict>=1.13",
     # "flash-attn",
     "torchvision>=0.24.1",
