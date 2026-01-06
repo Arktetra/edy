@@ -18,7 +18,7 @@ class EdyDataModule(DataModule):
             return
 
         huggingface_hub.snapshot_download(
-            repo_id="Arktetra/edy-dataset-final",
+            repo_id="Darktetra/edy-dataset-final",
             repo_type="dataset",
             local_dir=ROOT,
         )
