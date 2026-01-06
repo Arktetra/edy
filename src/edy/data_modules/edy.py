@@ -1,9 +1,11 @@
 from edy.data_modules.base import DataModule
 from edy.datasets.edy_dataset import EdyDataset
-from edy.metadata.edy import PROCESSED_DATA_DIR
+# from edy.metadata.edy import PROCESSED_DATA_DIR
 
 import huggingface_hub
 import zipfile
+
+from pathlib import Path
 
 
 class EdyDataModule(DataModule):
@@ -11,7 +13,7 @@ class EdyDataModule(DataModule):
         self, root: str, batch_size: int = 1, shuffle: bool = True, num_workers: int = 1, on_gpu: bool = False
     ):
         super().__init__(batch_size, shuffle, num_workers, on_gpu)
-        self.data_dir = PROCESSED_DATA_DIR
+        self.data_dir = Path(root / "data" / "processed" / "EDY")
         self.root = root
 
     def prepare_data(self):
