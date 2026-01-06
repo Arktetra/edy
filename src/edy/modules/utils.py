@@ -1,5 +1,5 @@
 import torch.nn as nn
-from ..modules import sparse as sp
+# from ..modules import sparse as sp
 
 FP16_MODULES = (
     nn.Conv1d,
@@ -9,8 +9,8 @@ FP16_MODULES = (
     nn.ConvTranspose2d,
     nn.ConvTranspose3d,
     nn.Linear,
-    sp.SparseConv3d,
-    sp.SparseLinear,
+    # sp.SparseConv3d,
+    # sp.SparseLinear,
 )
 
 
