@@ -13,7 +13,7 @@ class EdyDataModule(DataModule):
         self, root: str, batch_size: int = 1, shuffle: bool = True, num_workers: int = 1, on_gpu: bool = False
     ):
         super().__init__(batch_size, shuffle, num_workers, on_gpu)
-        self.data_dir = Path(root / "data" / "processed" / "EDY")
+        self.data_dir = Path(root) / "data" / "processed" / "EDY"
         self.root = root
 
     def prepare_data(self):
