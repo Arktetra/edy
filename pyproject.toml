@@ -6,31 +6,31 @@ dependencies = [
     "numpy",
     "matplotlib",
     # "torch",
-    "jaxtyping>=0.3.3",
+    "jaxtyping",
     "tqdm",
     "pandas",
-    "dotenv>=0.9.9",
-    "huggingface-hub>=1.1.5",
-    "hf-transfer>=0.1.9",
+    "dotenv",
+    "huggingface-hub",
+    "hf-transfer",
     # "triton>=3.5.1",
     # "mathutils>=3.3.0",
-    "jupyterlab>=4.5.1",
-    "safetensors>=0.7.0",
+    "jupyterlab",
+    "safetensors",
     ## "utils3d",
-    "easydict>=1.13",
+    "easydict",
     ## "flash-attn",
     # "torchvision>=0.24.1",
-    "trimesh>=4.10.1",
+    "trimesh",
     ## "diffoctreerast",
     ## "nvdiffrast",
 ]
 
 [dependency-groups]
 dev = [
-    "nvitop>=1.6.1",
-    "pre-commit>=4.5.0",
+    "nvitop",
+    "pre-commit",
     "jupyterlab",
-    "rich>=14.2.0",
+    "rich",
 ]
 
 dataset = [
