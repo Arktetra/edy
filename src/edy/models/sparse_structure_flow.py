@@ -248,9 +248,12 @@ class SparseStructureFlowModel(nn.Module):
 
             return model
         elif transformer_block_type == "CrossOnly":
-            ckpt_path = "ckpts/ss_scenegen_flow_img_dit_L_16l8_fp16.pt"
+            ckpt_path = "sparse-structure-flow.pth"
             huggingface_hub.hf_hub_download(
-                repo_id="haoningwu/Scenegen", repo_type="model", filename=ckpt_path, local_dir=Path(__file__).parents[3]
+                repo_id="Darktetra/edy-models",
+                repo_type="model",
+                filename=ckpt_path,
+                local_dir=Path(__file__).parents[3],
             )
 
             model = SparseStructureFlowModel(
