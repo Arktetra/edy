@@ -253,7 +253,7 @@ class SparseStructureFlowModel(nn.Module):
                 repo_id="Darktetra/edy-models",
                 repo_type="model",
                 filename=ckpt_path,
-                local_dir=Path(__file__).parents[3],
+                local_dir=Path(__file__).parents[3] / "ckpts",
             )
             # ckpt_path = "ckpts/ss_scenegen_flow_img_dit_L_16l8_fp16.pt"
             # huggingface_hub.hf_hub_download(
@@ -282,7 +282,7 @@ class SparseStructureFlowModel(nn.Module):
 
             # load_model(model, Path(__file__).parents[3] / ckpt_path, strict=True)
             model.load_state_dict(
-                torch.load(Path(__file__).parents[3] / ckpt_path, map_location=device, weights_only=False), strict=False
+                torch.load(Path(__file__).parents[3] / ckpt_path, map_location=device, weights_only=True), strict=True
             )
 
             return model
