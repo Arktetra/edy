@@ -285,7 +285,7 @@ class SparseStructureFlowModel(nn.Module):
                 torch.load(Path(__file__).parents[3] / "ckpts" / ckpt_path, map_location=device, weights_only=True), strict=True
             )
 
-            return model
+            return model.to(device)
         else:
             raise ValueError("Unknown Transformer Block Type")
 
