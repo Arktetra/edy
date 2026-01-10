@@ -55,7 +55,7 @@ class PositionHead(nn.Module):
     ):
         super(PositionHead, self).__init__()
 
-        self.pose_encoding_type == pose_encoding_type
+        self.pose_encoding_type = pose_encoding_type
         if pose_encoding_type == "absT_quatR_S":
             self.target_dim = 8
         elif pose_encoding_type == "absT_eulerR_S":
