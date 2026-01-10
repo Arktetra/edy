@@ -214,7 +214,7 @@ class SparseStructureFlowModel(nn.Module):
             self.convert_to_fp16()
 
     @staticmethod
-    def from_pretrained(transformer_block_type: str, device: str) -> "SparseStructureFlowModel":
+    def from_pretrained(transformer_block_type: str, use_checkpoint: bool, device: str) -> "SparseStructureFlowModel":
         if transformer_block_type == "Cross":
             ckpt_path = "ckpts/ss_scenegen_flow_img_dit_L_16l8_fp16.pt"
             huggingface_hub.hf_hub_download(
@@ -234,7 +234,7 @@ class SparseStructureFlowModel(nn.Module):
                 pe_mode="ape",
                 qk_rms_norm=True,
                 use_fp16=True,
-                use_checkpoint=False,
+                use_checkpoint=use_checkpoint,
                 use_global=True,
                 trunk_depth=4,
                 num_iteration=4,
@@ -273,7 +273,7 @@ class SparseStructureFlowModel(nn.Module):
                 pe_mode="ape",
                 qk_rms_norm=True,
                 use_fp16=True,
-                use_checkpoint=False,
+                use_checkpoint=use_checkpoint,
                 use_global=True,
                 trunk_depth=4,
                 num_iteration=4,
@@ -282,7 +282,8 @@ class SparseStructureFlowModel(nn.Module):
 
             # load_model(model, Path(__file__).parents[3] / ckpt_path, strict=True)
             model.load_state_dict(
-                torch.load(Path(__file__).parents[3] / "ckpts" / ckpt_path, map_location=device, weights_only=True), strict=True
+                torch.load(Path(__file__).parents[3] / "ckpts" / ckpt_path, map_location=device, weights_only=True),
+                strict=True,
             )
 
             return model.to(device)
