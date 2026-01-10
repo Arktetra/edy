@@ -101,30 +101,24 @@ def scaled_dot_product_attention(*args, **kwargs):
         assert len(k.shape) == 4, f"Invalid shape for k, got {k.shape}, expected [N, L, H, Ci]"
         assert len(v.shape) == 4, f"Invalid shape for v, got {v.shape}, expected [N, L, H, Co]"
 
-    # if BACKEND == "naive":
-    #     if num_all_args == 1:
-    #         q, k, v = qkv.unbind(dim=2)
-    #     elif num_all_args == 2:
-    #         k, v = kv.unbind(dim=2)
-    #     out = _naive_sdpa(q, k, v)
+    if BACKEND == "naive":
+        if num_all_args == 1:
+            q, k, v = qkv.unbind(dim=2)
+        elif num_all_args == 2:
+            k, v = kv.unbind(dim=2)
+        out = _naive_sdpa(q, k, v)
 
-    # elif BACKEND == "sdpa":
-    #     if num_all_args == 1:
-    #         q, k, v = qkv.unbind(dim=2)
-    #     elif num_all_args == 2:
-    #         k, v = kv.unbind(dim=2)
-    #     out = sdpa(q, k, v, need_weights=False)
-    # else:
-    #     raise ValueError(f"Unknown attention module: {BACKEND}")
+    elif BACKEND == "sdpa":
+        if num_all_args == 1:
+            q, k, v = qkv.unbind(dim=2)
+        elif num_all_args == 2:
+            k, v = kv.unbind(dim=2)
 
-    if num_all_args == 1:
-        q, k, v = qkv.unbind(dim=2)
-    elif num_all_args == 2:
-        k, v = kv.unbind(dim=2)
-
-    q = q.permute(0, 2, 1, 3)
-    k = k.permute(0, 2, 1, 3)
-    v = v.permute(0, 2, 1, 3)
-    out = sdpa(q, k, v)
+        q = q.permute(0, 2, 1, 3)
+        k = k.permute(0, 2, 1, 3)
+        v = v.permute(0, 2, 1, 3)
+        out = sdpa(q, k, v)
+    else:
+        raise ValueError(f"Unknown attention module: {BACKEND}")
 
     return out.permute(0, 2, 1, 3)

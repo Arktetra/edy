@@ -1,4 +1,4 @@
-BACKEND = "naive"
+BACKEND = "sdpa"
 DEBUG = False
 
 
