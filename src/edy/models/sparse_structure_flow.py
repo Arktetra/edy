@@ -248,7 +248,7 @@ class SparseStructureFlowModel(nn.Module):
 
             return model
         elif transformer_block_type == "CrossOnly":
-            ckpt_path = "ckpts/ss-flow-model.pt"
+            ckpt_path = "ss-flow-model.pt"
             huggingface_hub.hf_hub_download(
                 repo_id="Darktetra/edy-models",
                 repo_type="model",
