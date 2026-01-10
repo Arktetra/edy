@@ -282,7 +282,7 @@ class SparseStructureFlowModel(nn.Module):
 
             # load_model(model, Path(__file__).parents[3] / ckpt_path, strict=True)
             model.load_state_dict(
-                torch.load(Path(__file__).parents[3] / ckpt_path, map_location=device, weights_only=True), strict=True
+                torch.load(Path(__file__).parents[3] / "ckpts" / ckpt_path, map_location=device, weights_only=True), strict=True
             )
 
             return model
