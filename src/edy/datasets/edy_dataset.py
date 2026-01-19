@@ -51,12 +51,14 @@ class EdyDataset(Dataset):
             positions[obj, 3:7] = torch.tensor(position[f"{obj}"][1])
             positions[obj, 7:] = torch.tensor(position[f"{obj}"][2])
 
+        valid_objects = [i for i, image in enumerate(masked_images) if not (image == 0).all()]
+
         return {
             "scene_image": scene_image,
-            "mask_images": mask_images,
-            "masked_images": masked_images,
-            "positions": positions,
-            "ss_latents": ss_latents,
+            "mask_images": mask_images[valid_objects],
+            "masked_images": masked_images[valid_objects],
+            "positions": positions[valid_objects],
+            "ss_latents": ss_latents[valid_objects],
         }
 
     def process_scene_image(self, scene_image_path: Path):
