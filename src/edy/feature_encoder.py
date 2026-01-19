@@ -77,8 +77,12 @@ class FeatureEncoder:
     def get_cond(
         self, masked_images: torch.Tensor, scene_image: torch.Tensor, mask_images: torch.Tensor
     ) -> torch.Tensor:
+        if masked_images.ndim == 3:
+            masked_images = masked_images.unsqueeze(0)
         cond = self.encode_dinov2_features(masked_images)
 
+        if mask_images.ndim == 3:
+            mask_images = mask_images.unsqueeze(0)
         mask_cond = self.encode_dinov2_features(mask_images)
         cond = torch.cat([cond, mask_cond], dim=1)
 
