@@ -78,7 +78,7 @@ class EdyDataset(Dataset):
 
     def process_masked_images(self, masked_image_paths: List[Path]):
         masked_images = [Image.open(image_path) for image_path in masked_image_paths]
-        bboxes = [np.array(image) for image in masked_images]
+        bboxes = [np.array(image).nonzero() for image in masked_images]
         bboxes = [[bbox[1].min(), bbox[0].min(), bbox[1].max(), bbox[0].max()] for bbox in bboxes]
         centers = [[(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2] for bbox in bboxes]
         hsizes = [max(bbox[2] - bbox[0], bbox[3] - bbox[1]) / 2 for bbox in bboxes]
