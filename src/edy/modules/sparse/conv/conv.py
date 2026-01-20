@@ -3,8 +3,6 @@ import math
 import torch
 import torch.nn as nn
 
-import flex_gemm
-
 from flex_gemm.ops.spconv import sparse_submanifold_conv3d
 
 from edy.modules.sparse.tensor import SparseTensor
@@ -22,6 +20,7 @@ class SparseConv3d(nn.Module):
         bias: bool = True,
     ):
         super(SparseConv3d, self).__init__()
+        self.sparse_conv3d_init(in_channels, out_channels, kernel_size, stride, dilation, padding, bias)
 
     def sparse_conv3d_init(
         self,
@@ -32,7 +31,6 @@ class SparseConv3d(nn.Module):
         dilation: int = 1,
         padding: Optional[int] = None,
         bias: bool = True,
-        indice_Key: Optional[int] = None,
     ):
         assert stride == 1 and (padding is None), (
             "Currently flex_gemm implementation only support submanifold sparse convolutoin (stride=1, padding=None)"
@@ -61,9 +59,6 @@ class SparseConv3d(nn.Module):
         self.weight = nn.Parameter(self.weight.permute(0, 2, 3, 4, 1).contiguous())
 
     def forward(self, x: SparseTensor) -> SparseTensor:
-        flex_gemm.ops.spconv.set_algorithm("masked_implicit_gemm_splitk")
-        flex_gemm.ops.spconv.set_hashmap_ratio(2.0)
-
         Co, Kd, Kh, Kw, Ci = self.weight.shape
         neighbor_cache_key = f"SubMConv3d_neighbor_cache_{Kw}x{Kh}x{Kd}_dilation{self.dilation}"
         neighbor_cache = x.get_spatial_cache(neighbor_cache_key)
