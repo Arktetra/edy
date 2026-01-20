@@ -55,7 +55,6 @@ class PositionHead(nn.Module):
     ):
         super(PositionHead, self).__init__()
 
-        self.pose_encoding_type = pose_encoding_type
         if pose_encoding_type == "absT_quatR_S":
             self.target_dim = 8
         elif pose_encoding_type == "absT_eulerR_S":
@@ -63,6 +62,7 @@ class PositionHead(nn.Module):
         else:
             raise NotImplementedError(f"Pose encoding type {pose_encoding_type} not implemented")
 
+        self.pose_encoding_type = pose_encoding_type
         self.trans_act = trans_act
         self.quat_act = quat_act
         self.s_act = s_act
