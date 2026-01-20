@@ -37,7 +37,7 @@ class EdyDataset(Dataset):
         mask_images = self.process_mask_images(mask_image_paths)
         masked_images = self.process_masked_images(masked_image_paths)
 
-        ss_latents = [np.load(ss_latents_path)["arr_0"] for ss_latents_path in ss_latents_paths]
+        ss_latents = [np.load(ss_latents_path)["arr_0"].squeeze() for ss_latents_path in ss_latents_paths]
         # print(ss_latents[0].shape)
         ss_latents = torch.tensor(np.stack(ss_latents, axis=0))
 
