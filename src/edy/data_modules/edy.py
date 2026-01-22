@@ -3,9 +3,12 @@ from edy.datasets.edy_dataset import EdyDataset
 # from edy.metadata.edy import PROCESSED_DATA_DIR
 
 import huggingface_hub
+import torch
 import zipfile
 
 from pathlib import Path
+
+from torch.utils.data import random_split
 
 
 class EdyDataModule(DataModule):
@@ -31,4 +34,7 @@ class EdyDataModule(DataModule):
             ref.extractall()
 
     def setup(self):
-        self.train_dataset = EdyDataset(self.data_dir)
+        dataset = EdyDataset(self.data_dir)
+        generator = torch.Generator().manual_seed(41)
+        self.train_dataset, self.val_dataset = random_split(dataset, [0.9, 0.1], generator=generator)
+        self.val_dataset, self.test_dataset = random_split(self.val_dataset, [0.8, 0.2], generator=generator)

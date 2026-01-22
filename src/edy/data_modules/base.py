@@ -26,3 +26,23 @@ class DataModule:
             num_workers=self.num_workers,
             pin_memory=self.on_gpu,
         )
+
+    @abstractmethod
+    def val_dataloader(self):
+        return DataLoader(
+            self.val_dataset,
+            batch_size=self.batch_size,
+            shuffle=self.shuffle,
+            num_workers=self.num_workers,
+            pin_memory=self.on_gpu,
+        )
+
+    @abstractmethod
+    def test_dataloader(self):
+        return DataLoader(
+            self.test_dataset,
+            batch_size=self.batch_size,
+            shuffle=self.shuffle,
+            num_workers=self.num_workers,
+            pin_memory=self.on_gpu,
+        )
