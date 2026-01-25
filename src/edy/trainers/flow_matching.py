@@ -128,17 +128,17 @@ class FlowMatchingTrainer(Trainer):
 
         trans_loss = (
             F.smooth_l1_loss(
-                pred_positions[1:, :3] / scene_scale / self.smooth_scale,
-                positions[1:, :3] / scene_scale / self.smooth_scale,
+                pred_positions[:, :3] / scene_scale / self.smooth_scale,
+                positions[:, :3] / scene_scale / self.smooth_scale,
             )
             * self.smooth_scale
         )
         rot_loss = (
-            F.smooth_l1_loss(pred_positions[1:, 3:7] / self.smooth_scale, positions[1:, 3:7] / self.smooth_scale)
+            F.smooth_l1_loss(pred_positions[:, 3:7] / self.smooth_scale, positions[:, 3:7] / self.smooth_scale)
             * self.smooth_scale
         )
         scale_loss = (
-            F.smooth_l1_loss(pred_positions[1:, 7:] / self.smooth_scale, positions[1:, 7:] / self.smooth_scale)
+            F.smooth_l1_loss(pred_positions[:, 7:] / self.smooth_scale, positions[:, 7:] / self.smooth_scale)
             * self.smooth_scale
         )
         pos_loss = trans_loss * self.trans_weight + rot_loss * self.rot_weight + scale_loss * self.scale_weight
