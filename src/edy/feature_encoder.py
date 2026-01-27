@@ -17,6 +17,12 @@ class FeatureEncoder:
         self.dinov2_model.eval()
         self.vggt_model.eval()
 
+    def compile(self):
+        print("[INFO] Compiling dinov2 model.")
+        self.dinov2_model = torch.compile(self.dinov2_model)
+        print("[INFO] Compiling VGGT model.")
+        self.vggt_model = torch.compile(self.vggt_model)
+
     def preprocess_vggt_image(self, input: Image.Image) -> Image.Image:
         target_size = 518
         if input.mode == "RGBA":
