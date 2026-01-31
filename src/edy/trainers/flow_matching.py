@@ -21,8 +21,8 @@ class FlowMatchingTrainer(Trainer):
         feature_encoder: FeatureEncoder,
         sigma_min: float = 1e-5,
         smooth_scale: float = 0.02,
-        trans_weight: float = 2,
-        rot_weight: float = 3,
+        trans_weight: float = 3,
+        rot_weight: float = 2,
         scale_weight: float = 2,
         position_weight_min_ratio: float = 0.2,
         position_weight_max_ratio: float = 1.0,
@@ -40,6 +40,8 @@ class FlowMatchingTrainer(Trainer):
         self.feature_encoder = feature_encoder
 
         self._freeze_model_params()
+        if hasattr(self.ss_flow_model, "_orig_mod"):
+            print("[Note] Found a compiled model: first iteration will take longer time.")
         print(f"Number of trainable parameters: {self.get_trainable_params()}")
 
     def _freeze_model_params(self):
@@ -179,7 +181,7 @@ class FlowMatchingTrainer(Trainer):
 
         terms["loss"] = terms["mse"] + terms["pos_loss"] * pos_weight
 
-        return terms, {}
+        return terms, pred_positions
 
     def run(self, train_dataloader, val_dataloader, lr, local_dir, steps=10000, device="cpu"):
         optim = self.get_optimizer(lr)
@@ -222,42 +224,6 @@ class FlowMatchingTrainer(Trainer):
         loss_path.mkdir(exist_ok=True)
 
         while step < steps:
-            if step > 0 and step % len(train_dataloader) == 0:
-                self.ss_flow_model.eval()
-                with torch.no_grad():
-                    loss_dict = {"mse": [], "pos_loss": [], "losses": []}
-
-                    for i, data_pack in enumerate(val_dataloader):
-                        scene_image = data_pack["scene_image"][0].to(device)
-                        mask_images = data_pack["mask_images"][0].to(device)
-                        masked_images = data_pack["masked_images"][0].to(device)
-                        positions = data_pack["positions"][0].detach()
-                        ss_latents = data_pack["ss_latents"][0].detach()
-
-                        cond = self.feature_encoder.get_cond(masked_images, scene_image, mask_images).detach()
-
-                        losses, _ = self.training_losses(
-                            ss_latents.to("cuda:1"), positions.to("cuda:1"), cond.to("cuda:1")
-                        )
-
-                        loss_dict["mse"].append(losses["mse"].detach().cpu().item())
-                        loss_dict["pos_loss"].append(["pos_loss"].detach().cpu().item())
-                        loss_dict["losses"].append(losses["loss"].detach().cpu().item())
-
-                    val_losses["step"].append(step)
-                    val_losses["mse"].append(sum(loss_dict["mse"]) / len(val_dataloader))
-                    val_losses["pos_loss"].append(sum(loss_dict["pos_loss"]) / len(val_dataloader))
-                    val_losses["losses"].append(sum(loss_dict["losses"]) / len(val_dataloader))
-
-                    with open(loss_path / "val_losses.json", "w") as f:
-                        json.dump(val_losses, f, indent=4)
-
-                    huggingface_hub.upload_file(
-                        path_or_fileobj="/kaggle/working/val_losses.json",
-                        path_in_repo="val_losses.json",
-                        repo_id="Darktetra/edy-models",
-                    )
-
             self.ss_flow_model.train()
             for i, data_pack in enumerate(train_dataloader):
                 scene_image = data_pack["scene_image"][0].to(device)
@@ -269,7 +235,9 @@ class FlowMatchingTrainer(Trainer):
                 cond = self.feature_encoder.get_cond(masked_images, scene_image, mask_images).detach()
 
                 optim.zero_grad()
-                losses, _ = self.training_losses(ss_latents.to("cuda:1"), positions.to("cuda:1"), cond.to("cuda:1"))
+                losses, pred_positions = self.training_losses(
+                    ss_latents.to("cuda:1"), positions.to("cuda:1"), cond.to("cuda:1")
+                )
                 losses["loss"].backward()
                 torch.nn.utils.clip_grad_norm_(self.ss_flow_model.parameters(), max_norm=1.0)
                 optim.step()
@@ -295,6 +263,8 @@ class FlowMatchingTrainer(Trainer):
                         f"[mask_images] shape: {mask_images.shape}, min: {mask_images.min()}, max: {mask_images.max()}\n"
                         f"[mask_images] shape: {mask_images.shape}, min: {mask_images.min()}, max: {mask_images.max()}\n"
                         f"[positions] shape: {positions.shape}, min: {positions.min()}, max: {positions.max()}\n"
+                        f"[positions]: {positions}\n"
+                        f"[pred positions]: {pred_positions}\n"
                     )
                     raise ValueError("Encountered nan.")
 
@@ -327,8 +297,49 @@ class FlowMatchingTrainer(Trainer):
 
                 step += 1
 
+                # perform validation
+                if step > 0 and step % len(train_dataloader) == 0:
+                    self.ss_flow_model.eval()
+                    with torch.no_grad():
+                        loss_dict = {"mse": [], "pos_loss": [], "losses": []}
+
+                        for i, data_pack in enumerate(val_dataloader):
+                            scene_image = data_pack["scene_image"][0].to(device)
+                            mask_images = data_pack["mask_images"][0].to(device)
+                            masked_images = data_pack["masked_images"][0].to(device)
+                            positions = data_pack["positions"][0].detach()
+                            ss_latents = data_pack["ss_latents"][0].detach()
+
+                            cond = self.feature_encoder.get_cond(masked_images, scene_image, mask_images).detach()
+
+                            losses, _ = self.training_losses(
+                                ss_latents.to("cuda:1"), positions.to("cuda:1"), cond.to("cuda:1")
+                            )
+
+                            loss_dict["mse"].append(losses["mse"].detach().cpu().item())
+                            loss_dict["pos_loss"].append(losses["pos_loss"].detach().cpu().item())
+                            loss_dict["losses"].append(losses["loss"].detach().cpu().item())
+
+                        val_losses["step"].append(step)
+                        val_losses["mse"].append(sum(loss_dict["mse"]) / len(val_dataloader))
+                        val_losses["pos_loss"].append(sum(loss_dict["pos_loss"]) / len(val_dataloader))
+                        val_losses["loss"].append(sum(loss_dict["losses"]) / len(val_dataloader))
+
+                        with open(loss_path / "val_losses.json", "w") as f:
+                            json.dump(val_losses, f, indent=4)
+
+                        huggingface_hub.upload_file(
+                            path_or_fileobj="/kaggle/working/val_losses.json",
+                            path_in_repo="val_losses.json",
+                            repo_id="Darktetra/edy-models",
+                        )
+                    self.ss_flow_model.train()
+
     def save_checkpoints(self, path: Path):
-        torch.save(self.ss_flow_model.state_dict(), path)
+        if hasattr(self.ss_flow_model, "_orig_mod"):
+            torch.save(self.ss_flow_model._orig_mod.state_dict(), path)
+        else:
+            torch.save(self.ss_flow_model.state_dict(), path)
 
     def get_train_loss(self):
         pass
