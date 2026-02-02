@@ -23,6 +23,7 @@ pip install -e .
 Some dependencies need to be installed manually:
 
 ```bash
+pip install git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8
 cd submodules
 git clone https://github.com/JeffreyXiang/FlexGEMM.git
 cd FlexGEMM
