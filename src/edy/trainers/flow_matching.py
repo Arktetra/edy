@@ -122,25 +122,25 @@ class FlowMatchingTrainer(Trainer):
             Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]: translation, rotation, scale and position loss.
         """
         scene_scale = (
-            torch.max(positions[0:, :3] + positions[0:, 7].unsqueeze(-1) / 2, dim=0).values
-            - torch.min(positions[0:, :3] - positions[0:, 7].unsqueeze(-1) / 2, dim=0).values
+            torch.max(positions[1:, :3] + positions[1:, 7].unsqueeze(-1) / 2, dim=0).values
+            - torch.min(positions[1:, :3] - positions[1:, 7].unsqueeze(-1) / 2, dim=0).values
         )
         min_val = torch.tensor(1e-2, device=scene_scale.device, dtype=scene_scale.dtype)
         scene_scale = torch.max(scene_scale, min_val)
 
         trans_loss = (
             F.smooth_l1_loss(
-                pred_positions[:, :3] / scene_scale / self.smooth_scale,
-                positions[:, :3] / scene_scale / self.smooth_scale,
+                pred_positions[1:, :3] / scene_scale / self.smooth_scale,
+                positions[1:, :3] / scene_scale / self.smooth_scale,
             )
             * self.smooth_scale
         )
         rot_loss = (
-            F.smooth_l1_loss(pred_positions[:, 3:7] / self.smooth_scale, positions[:, 3:7] / self.smooth_scale)
+            F.smooth_l1_loss(pred_positions[1:, 3:7] / self.smooth_scale, positions[1:, 3:7] / self.smooth_scale)
             * self.smooth_scale
         )
         scale_loss = (
-            F.smooth_l1_loss(pred_positions[:, 7:] / self.smooth_scale, positions[:, 7:] / self.smooth_scale)
+            F.smooth_l1_loss(pred_positions[1:, 7:] / self.smooth_scale, positions[1:, 7:] / self.smooth_scale)
             * self.smooth_scale
         )
         pos_loss = trans_loss * self.trans_weight + rot_loss * self.rot_weight + scale_loss * self.scale_weight
