@@ -57,7 +57,9 @@ class EdyDataset(Dataset):
             "scene_image": scene_image,
             "mask_images": mask_images[valid_objects],
             "masked_images": masked_images[valid_objects],
-            "positions": positions[valid_objects],
+            "positions": torch.cat(
+                (torch.Tensor([[0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]]), positions[valid_objects]), dim=0
+            ),
             "ss_latents": ss_latents[valid_objects],
         }
 
