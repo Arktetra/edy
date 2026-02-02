@@ -290,7 +290,7 @@ class SparseStructureDecoder(nn.Module):
         self.middle_block.apply(convert_module_to_f32)
 
     @staticmethod
-    def from_pretrained() -> "SparseStructureDecoder":
+    def from_pretrained(device: str = "cpu") -> "SparseStructureDecoder":
         # print(Path(__file__).parents[3])
         ckpt_path = "ckpts/ss_dec_conv3d_16l8_fp16.safetensors"
         huggingface_hub.hf_hub_download(
@@ -309,7 +309,7 @@ class SparseStructureDecoder(nn.Module):
             use_fp16=True,
         )
 
-        load_model(model, Path(__file__).parents[3] / ckpt_path, strict=True)
+        load_model(model, Path(__file__).parents[3] / ckpt_path, strict=True, device=device)
 
         return model
 
