@@ -5,7 +5,11 @@ import math
 import cv2
 from scipy.stats import qmc
 from easydict import EasyDict as edict
-from ..representations.octree import DfsOctree
+from typing import Optional
+
+from edy.representations.octree import DfsOctree
+
+from diffoctreerast import OctreeVoxelRasterizer
 
 
 def intrinsics_to_projection(
@@ -52,15 +56,6 @@ def render(
 
     Background tensor (bg_color) must be on GPU!
     """
-    # lazy import
-    if "OctreeTrivecRasterizer" not in globals():
-        from diffoctreerast import (
-            OctreeVoxelRasterizer,
-            OctreeGaussianRasterizer,
-            OctreeTrivecRasterizer,
-            OctreeDecoupolyRasterizer,
-        )
-
     # Set up rasterization configuration
     tanfovx = math.tan(viewpoint_camera.FoVx * 0.5)
     tanfovy = math.tan(viewpoint_camera.FoVy * 0.5)
@@ -84,16 +79,6 @@ def render(
     positions = octree.get_xyz
     if octree.primitive == "voxel":
         densities = octree.get_density
-    elif octree.primitive == "gaussian":
-        opacities = octree.get_opacity
-    elif octree.primitive == "trivec":
-        trivecs = octree.get_trivec
-        densities = octree.get_density
-        raster_settings.density_shift = octree.density_shift
-    elif octree.primitive == "decoupoly":
-        decoupolys_V, decoupolys_g = octree.get_decoupoly
-        densities = octree.get_density
-        raster_settings.density_shift = octree.density_shift
     else:
         raise ValueError(f"Unknown primitive {octree.primitive}")
     depths = octree.get_depth
@@ -101,10 +86,8 @@ def render(
     # If precomputed colors are provided, use them. Otherwise, if it is desired to precompute colors
     # from SHs in Python, do it. If not, then SH -> RGB conversion will be done by rasterizer.
     colors_precomp = None
-    shs = octree.get_features
     if octree.primitive in ["voxel", "gaussian"] and colors_overwrite is not None:
         colors_precomp = colors_overwrite
-        shs = None
 
     ret = edict()
 
@@ -112,9 +95,8 @@ def render(
         renderer = OctreeVoxelRasterizer(raster_settings=raster_settings)
         rgb, depth, alpha, distloss = renderer(
             positions=positions,
-            densities=densities,
-            shs=shs,
             colors_precomp=colors_precomp,
+            densities=densities,
             depths=depths,
             aabb=octree.aabb,
             aux=aux,
@@ -123,56 +105,6 @@ def render(
         ret["depth"] = depth
         ret["alpha"] = alpha
         ret["distloss"] = distloss
-    elif octree.primitive == "gaussian":
-        renderer = OctreeGaussianRasterizer(raster_settings=raster_settings)
-        rgb, depth, alpha = renderer(
-            positions=positions,
-            opacities=opacities,
-            shs=shs,
-            colors_precomp=colors_precomp,
-            depths=depths,
-            aabb=octree.aabb,
-            aux=aux,
-        )
-        ret["rgb"] = rgb
-        ret["depth"] = depth
-        ret["alpha"] = alpha
-    elif octree.primitive == "trivec":
-        raster_settings.used_rank = used_rank if used_rank is not None else trivecs.shape[1]
-        renderer = OctreeTrivecRasterizer(raster_settings=raster_settings)
-        rgb, depth, alpha, percent_depth = renderer(
-            positions=positions,
-            trivecs=trivecs,
-            densities=densities,
-            shs=shs,
-            colors_precomp=colors_precomp,
-            colors_overwrite=colors_overwrite,
-            depths=depths,
-            aabb=octree.aabb,
-            aux=aux,
-            halton_sampler=halton_sampler,
-        )
-        ret["percent_depth"] = percent_depth
-        ret["rgb"] = rgb
-        ret["depth"] = depth
-        ret["alpha"] = alpha
-    elif octree.primitive == "decoupoly":
-        raster_settings.used_rank = used_rank if used_rank is not None else decoupolys_V.shape[1]
-        renderer = OctreeDecoupolyRasterizer(raster_settings=raster_settings)
-        rgb, depth, alpha = renderer(
-            positions=positions,
-            decoupolys_V=decoupolys_V,
-            decoupolys_g=decoupolys_g,
-            densities=densities,
-            shs=shs,
-            colors_precomp=colors_precomp,
-            depths=depths,
-            aabb=octree.aabb,
-            aux=aux,
-        )
-        ret["rgb"] = rgb
-        ret["depth"] = depth
-        ret["alpha"] = alpha
 
     return ret
 
@@ -186,13 +118,14 @@ class OctreeRenderer:
     """
 
     def __init__(self, rendering_options={}) -> None:
-        try:
-            import diffoctreerast
-        except ImportError:
-            print("\033[93m[WARNING] diffoctreerast is not installed. The renderer will be disabled.\033[0m")
-            self.unsupported = True
-        else:
-            self.unsupported = False
+        # try:
+        #     import diffoctreerast
+        # except ImportError:
+        #     print("\033[93m[WARNING] diffoctreerast is not installed. The renderer will be disabled.\033[0m")
+        #     self.unsupported = True
+        # else:
+        #     self.unsupported = False
+        self.unsupported = False
 
         self.pipe = edict(
             {
@@ -222,7 +155,7 @@ class OctreeRenderer:
         octree: DfsOctree,
         extrinsics: torch.Tensor,
         intrinsics: torch.Tensor,
-        colors_overwrite: torch.Tensor = None,
+        colors_overwrite: Optional[torch.Tensor] = None,
     ) -> edict:
         """
         Render the octree.
