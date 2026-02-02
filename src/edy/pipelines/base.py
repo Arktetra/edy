@@ -24,16 +24,6 @@ class Pipeline:
         """
         pass
 
-    @property
-    def device(self) -> torch.device:
-        for model in self.models.values():
-            if hasattr(model, "device"):
-                return model.device
-        for model in self.models.values():
-            if hasattr(model, "parameters"):
-                return next(model.parameters()).device
-        raise RuntimeError("No device found.")
-
     def to(self, device: torch.device) -> None:
         for model in self.models.values():
             model.to(device)
