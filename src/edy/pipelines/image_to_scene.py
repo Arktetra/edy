@@ -62,7 +62,9 @@ class ImageToScenePipeline(Pipeline):
         return ImageToScenePipeline()
 
     @torch.no_grad()
-    def visualize(self, z_s: torch.Tensor, positions: torch.Tensor, batch_size: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def visualize(
+        self, z_s: torch.Tensor, positions: torch.Tensor, batch_size: int
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Visualize the sparse structure latents as rendered voxels.
 
@@ -93,9 +95,7 @@ class ImageToScenePipeline(Pipeline):
 
         for yaw, pitch in zip(yaws, pitch):
             orig = (
-                torch.tensor([np.sin(yaw) * np.cos(pitch), np.cos(yaw) * np.cos(pitch), np.sin(pitch)])
-                .float()
-                .cuda()
+                torch.tensor([np.sin(yaw) * np.cos(pitch), np.cos(yaw) * np.cos(pitch), np.sin(pitch)]).float().cuda()
                 * 2
             )
             fov = torch.deg2rad(torch.tensor(40)).cuda()
