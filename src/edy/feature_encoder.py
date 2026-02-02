@@ -106,4 +106,6 @@ class FeatureEncoder:
         scene_vggt_feature = scene_vggt_feature.expand(cond.shape[0], -1, -1)
         cond = torch.cat([cond, scene_vggt_feature], dim=1)
 
-        return cond
+        neg_cond = torch.zeros_like(cond)
+
+        return {"cond": cond, "neg_cond": neg_cond}
