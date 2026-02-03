@@ -63,7 +63,7 @@ class ImageToScenePipeline(Pipeline):
 
     @torch.no_grad()
     def visualize(
-        self, z_s: torch.Tensor, positions: torch.Tensor, batch_size: int
+        self, z_s: torch.Tensor, positions: torch.Tensor, batch_size: int, bg_color: Tuple[float] = (0, 0, 0)
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Visualize the sparse structure latents as rendered voxels.
@@ -81,7 +81,7 @@ class ImageToScenePipeline(Pipeline):
         renderer.rendering_options.resolution = 512
         renderer.rendering_options.near = 0.8
         renderer.rendering_options.far = 1.6
-        renderer.rendering_options.bg_color = (0, 0, 0)
+        renderer.rendering_options.bg_color = bg_color
         renderer.rendering_options.ssaa = 4
         renderer.pipe.primitive = "voxel"
 
