@@ -34,7 +34,7 @@ class EdyDataModule(DataModule):
             ref.extractall()
 
     def setup(self):
-        dataset = EdyDataset(self.data_dir)
+        self.dataset = EdyDataset(self.data_dir)
         generator = torch.Generator().manual_seed(41)
-        self.train_dataset, self.val_dataset = random_split(dataset, [0.9, 0.1], generator=generator)
+        self.train_dataset, self.val_dataset = random_split(self.dataset, [0.9, 0.1], generator=generator)
         self.val_dataset, self.test_dataset = random_split(self.val_dataset, [0.8, 0.2], generator=generator)
