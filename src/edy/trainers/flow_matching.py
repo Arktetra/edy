@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Optional
 from easydict import EasyDict as edict
 from pathlib import Path
 
@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from edy.feature_encoder import FeatureEncoder
 from edy.models.sparse_structure_flow import SparseStructureFlowModel
 from edy.trainers.base import Trainer
+from edy.trainers.mixins.cfg import ClassifierFreeGuidanceMixin
 
 
 class FlowMatchingTrainer(Trainer):
@@ -108,6 +109,12 @@ class FlowMatchingTrainer(Trainer):
         """
         return (1 - self.sigma_min) * noise - x_0  # basically the differentiation of diffusion process wrt t.
 
+    def get_cond(self, cond, **kwargs):
+        """
+        Get the conditioning data.
+        """
+        return cond["cond"]
+
     def get_position_loss(
         self, positions: torch.Tensor, pred_positions: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -148,11 +155,20 @@ class FlowMatchingTrainer(Trainer):
         return trans_loss.detach(), rot_loss.detach(), scale_loss.detach(), pos_loss
 
     def training_losses(
-        self, x_0: torch.Tensor, positions: torch.Tensor, cond: torch.Tensor = None
+        self, x_0: torch.Tensor, positions: torch.Tensor, cond: Optional[dict] = None
     ) -> Tuple[Dict, Dict]:
+        """
+        Compute loss for a single training step.
+
+        Args:
+        ---
+            x_0: [N, 8, 16, 16, 16] tensor of the ground truth sparse structure.
+            cond: [N, 6780, 1024]
+        """
         noise = torch.randn_like(x_0)
         t = self.sample_t(x_0.shape[0]).to(x_0.device).float()
         x_t = self.diffuse(x_0, t, noise)
+        cond = self.get_cond(**cond)
 
         pred, pred_positions = self.ss_flow_model(x_t, t * 1000, cond)
         target = self.get_v(x_0, noise, t)
@@ -343,3 +359,7 @@ class FlowMatchingTrainer(Trainer):
 
     def get_train_loss(self):
         pass
+
+
+class ImageConditionedFlowMatchingCFGTrainer(ClassifierFreeGuidanceMixin, FlowMatchingTrainer):
+    pass
