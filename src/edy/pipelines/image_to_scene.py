@@ -112,7 +112,7 @@ class ImageToScenePipeline(Pipeline):
             representation = Octree(
                 depth=10,
                 aabb=[-0.5, -0.5, -0.5, 1, 1, 1],
-                device="cuda",
+                device=self.device,
                 primitive="voxel",
                 sh_degree=0,
                 primitive_config={"solid": True},
@@ -121,7 +121,7 @@ class ImageToScenePipeline(Pipeline):
             resolution = x_0.shape[-1]
             representation.position = coords_vis.float() / resolution
             representation.depth = torch.full(
-                (representation.position.shape[0], 1), int(np.log2(resolution)), dtype=torch.uint8, device="cuda"
+                (representation.position.shape[0], 1), int(np.log2(resolution)), dtype=torch.uint8, device=self.device
             )
 
             image = torch.zeros(3, 1024, 1024).cuda()
@@ -146,7 +146,7 @@ class ImageToScenePipeline(Pipeline):
         representation = Octree(
             depth=10,
             aabb=[-0.5, -0.5, -0.5, 1.0, 1.0, 1.0],
-            device="cuda",
+            device=self.device,
             primitive="voxel",
             sh_degree=0,
             primitive_config={"solid": True},
@@ -182,13 +182,13 @@ class ImageToScenePipeline(Pipeline):
         z_max, z_min = scene_positions[:, 2].max(), scene_positions[:, 2].min()
 
         edge_length = max(x_max - y_min, y_max - y_min, z_max - z_min)
-        center = torch.tensor([(x_max + x_min) / 2, (y_max + y_min) / 2, (z_max + z_min) / 2], device="cuda")
+        center = torch.tensor([(x_max + x_min) / 2, (y_max + y_min) / 2, (z_max + z_min) / 2], device=self.device)
 
         scene_positions = (scene_positions - center) / edge_length + 0.5
 
         representation.position = scene_positions
         representation.depth = torch.full(
-            (representation.position.shape[0], 1), int(np.log2(512)), dtype=torch.uint8, device="cuda"
+            (representation.position.shape[0], 1), int(np.log2(512)), dtype=torch.uint8, device=self.device
         )
 
         axis_length = 0.3
@@ -197,23 +197,23 @@ class ImageToScenePipeline(Pipeline):
         axes_positions = []
         axes_colors = []
 
-        origin = torch.tensor([0.5, 0.5, 0.5], device="cuda")
+        origin = torch.tensor([0.5, 0.5, 0.5], device=self.device)
 
         for i, (axis_dir, color) in enumerate(
             zip(
                 [
-                    torch.tensor([1.0, 0.0, 0.0], device="cuda"),  # X-axis
-                    torch.tensor([0.0, 1.0, 0.0], device="cuda"),  # Y-axis
-                    torch.tensor([0.0, 0.0, 1.0], device="cuda"),
+                    torch.tensor([1.0, 0.0, 0.0], device=self.device),  # X-axis
+                    torch.tensor([0.0, 1.0, 0.0], device=self.device),  # Y-axis
+                    torch.tensor([0.0, 0.0, 1.0], device=self.device),
                 ],  # Z-axis
                 [
-                    torch.tensor([1.0, 0.0, 0.0], device="cuda"),  # Red
-                    torch.tensor([0.0, 1.0, 0.0], device="cuda"),  # Green
-                    torch.tensor([0.0, 0.0, 1.0], device="cuda"),
+                    torch.tensor([1.0, 0.0, 0.0], device=self.device),  # Red
+                    torch.tensor([0.0, 1.0, 0.0], device=self.device),  # Green
+                    torch.tensor([0.0, 0.0, 1.0], device=self.device),
                 ],  # Blue
             )
         ):
-            line_points = torch.linspace(0, axis_length, num_points_per_axis, device="cuda")
+            line_points = torch.linspace(0, axis_length, num_points_per_axis, device=self.device)
             for t in line_points:
                 pos = origin + axis_dir * t
                 axes_positions.append(pos)
@@ -228,13 +228,13 @@ class ImageToScenePipeline(Pipeline):
         representation.depth = torch.cat(
             [
                 representation.depth,
-                torch.full((axes_positions.shape[0], 1), int(np.log2(512)), dtype=torch.uint8, device="cuda"),
+                torch.full((axes_positions.shape[0], 1), int(np.log2(512)), dtype=torch.uint8, device=self.device),
             ],
             dim=0,
         )
 
         # Create color map for rendering
-        all_colors = torch.zeros((representation.position.shape[0], 3), device="cuda")
+        all_colors = torch.zeros((representation.position.shape[0], 3), device=self.device)
         all_colors[: scene_positions.shape[0]] = scene_positions  # Original voxel positions as colors
         all_colors[scene_positions.shape[0] :] = axes_colors  # Axis colors
 
