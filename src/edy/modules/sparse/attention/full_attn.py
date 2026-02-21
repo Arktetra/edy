@@ -1,6 +1,6 @@
 from typing import *
+from torch.nn.attention.varlen import varlen_attn
 
-import flash_attn
 import torch
 
 from edy.modules.sparse.tensor import SparseTensor
@@ -8,6 +8,63 @@ from edy.modules.sparse.tensor import SparseTensor
 __all__ = [
     "sparse_scaled_dot_product_attention",
 ]
+
+def flash_attn_varlen_func(
+    q,
+    k,
+    v, 
+    cu_seq_q,
+    cu_seq_k,
+    max_q,
+    max_k,
+    causal=None
+):
+    head_size_og = q.size(2)
+    if head_size_og % 8 != 0:
+        q = torch.nn.functional.pad(q, [0, 8 - head_size_og % 8])
+        k = torch.nn.functional.pad(k, [0, 8 - head_size_og % 8])
+        v = torch.nn.functional.pad(v, [0, 8 - head_size_og % 8])
+    out_padded =  varlen_attn(
+        q, k, v, cu_seq_q, cu_seq_k, max_q, max_k, is_causal=causal
+    )
+    return out_padded[..., :head_size_og]
+
+def flash_attn_varlen_kvpacked_func(
+    q,
+    kv,
+    cu_seq_q,
+    cu_seq_k,
+    max_q,
+    max_k,
+    causal=None
+):
+    k, v = kv[:, 0].detach(), kv[:, 1].detach()
+    head_size_og = q.size(2)
+    if head_size_og % 8 != 0:
+        q = torch.nn.functional.pad(q, [0, 8 - head_size_og % 8])
+        k = torch.nn.functional.pad(k, [0, 8 - head_size_og % 8])
+        v = torch.nn.functional.pad(v, [0, 8 - head_size_og % 8])
+    out_padded = varlen_attn(
+        q, k, v, cu_seq_q, cu_seq_k, max_q, max_k, is_causal=causal
+    )
+    return out_padded[..., :head_size_og]
+
+def flash_attn_varlen_qkvpacked_func(
+    qkv,
+    cu_seq,
+    max_len,
+    causal=None
+):
+    q, k, v = qkv[:, 0].detach(), qkv[:, 1].detach(), qkv[:, 2].detach()
+    head_size_og = q.size(2)
+    if head_size_og % 8 != 0:
+        q = torch.nn.functional.pad(q, [0, 8 - head_size_og % 8])
+        k = torch.nn.functional.pad(k, [0, 8 - head_size_og % 8])
+        v = torch.nn.functional.pad(v, [0, 8 - head_size_og % 8])
+    out_padded = varlen_attn(
+        q, k, v, cu_seq, cu_seq, max_len, max_len, is_causal=causal
+    )
+    return out_padded[..., :head_size_og]
 
 
 @overload
@@ -199,13 +256,13 @@ def sparse_scaled_dot_product_attention(*args, **kwargs):
     if num_all_args in [2, 3]:
         cu_seqlens_kv = torch.cat([torch.tensor([0]), torch.cumsum(torch.tensor(kv_seqlen), dim=0)]).int().to(device)
     if num_all_args == 1:
-        out = flash_attn.flash_attn_varlen_qkvpacked_func(qkv, cu_seqlens_q, max(q_seqlen))
+        out = flash_attn_varlen_qkvpacked_func(qkv, cu_seqlens_q, max(q_seqlen))
     elif num_all_args == 2:
-        out = flash_attn.flash_attn_varlen_kvpacked_func(
+        out = flash_attn_varlen_kvpacked_func(
             q, kv, cu_seqlens_q, cu_seqlens_kv, max(q_seqlen), max(kv_seqlen)
         )
     elif num_all_args == 3:
-        out = flash_attn.flash_attn_varlen_func(q, k, v, cu_seqlens_q, cu_seqlens_kv, max(q_seqlen), max(kv_seqlen))
+        out = flash_attn_varlen_func(q, k, v, cu_seqlens_q, cu_seqlens_kv, max(q_seqlen), max(kv_seqlen))
 
     if s is not None:
         return s.replace(out)
