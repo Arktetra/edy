@@ -197,12 +197,10 @@ class SparseTensor:
         return self.replace(new_feats, new_coords)
 
     def half(self) -> "SparseTensor":
-        new_feats = self.feats.half()
-        return self.replace(new_feats)
+        return self.replace(self.feats.half())
 
     def float(self) -> "SparseTensor":
-        new_feats = self.feats.float()
-        return self.replace(new_feats)
+        return self.replace(self.feats.float())
 
     def detach(self) -> "SparseTensor":
         new_coords = self.coords.detach()
