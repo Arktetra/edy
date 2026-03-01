@@ -3,6 +3,7 @@ from safetensors.torch import load_model
 from typing import Optional, Literal, List
 
 import huggingface_hub
+import torch
 import torch.nn as nn
 
 from edy.modules.utils import zero_module, convert_module_to_f16, convert_module_to_f32
@@ -146,7 +147,7 @@ class SLatDecoder(SparseTransformerBase):
             repo_id="haoningwu/SceneGen",
             repo_type="model",
             filename=ckpt_path,
-            local_dir=Path(__file__).parents[3],
+            local_dir=Path(__file__).parents[4],
         )
 
         model = SLatDecoder(
@@ -162,7 +163,7 @@ class SLatDecoder(SparseTransformerBase):
             representation_config={"use_color": True},
         )
 
-        load_model(model, Path(__file__).parents[3] / ckpt_path, strict=False)
+        load_model(model, Path(__file__).parents[4] / ckpt_path, strict=False)
 
         return model
 
@@ -208,6 +209,7 @@ class MeshExtractor:
         )
         self.out_channels = self.mesh_extractor.feats_channels
 
+    @torch.no_grad()
     def to_representation(self, x: sp.SparseTensor) -> List[MeshExtractResult]:
         """
         Convert a batch of network outputs to 3D representations.
