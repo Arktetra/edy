@@ -1,6 +1,5 @@
 from typing import Literal, Optional
 from pathlib import Path
-from safetensors.torch import load_model
 import huggingface_hub
 import numpy as np
 import torch
@@ -65,10 +64,10 @@ class TimestepEmbedder(nn.Module):
             (Float[torch.Tensor, "N, dim"]) - tensor of positional embeddings.
         """
         half = dim // 2
-        freqs = torch.exp(-np.log(max_period) * torch.arange(start=0, end=half, dtype=torch.float32) / half).to(
+        freqs = torch.exp(-np.log(max_period) * torch.arange(start=0, end=half, dtype=t.dtype) / half).to(
             device=t.device
         )
-        args = t[:, None].float() * freqs[None]
+        args = t[:, None] * freqs[None]
         embedding = torch.cat([torch.cos(args), torch.sin(args)], dim=-1)
         if dim % 2:
             embedding = torch.cat([embedding, torch.zeros_like(embedding[:, :1])], dim=-1)
