@@ -2,7 +2,7 @@ import torch
 
 from typing import Callable, Optional, List, Union, overload
 
-from edy.modules.sparse import DEBUG
+# from edy.modules.sparse import DEBUG
 from edy.modules.sparse.core import SparseConvTensor
 
 
@@ -77,22 +77,22 @@ class SparseTensor:
         self._scale = kwargs.get("scale", (1, 1, 1))
         self._spatial_cache = kwargs.get("spatial_cache", {})
 
-        if DEBUG:
-            try:
-                assert self.feats.shape[0] == self.coords.shape[0], (
-                    f"Invalid feats shape: {self.feats.shape}, coords shape: {self.coords.shape}"
-                )
-                assert self.shape == self.__cal_shape(self.feats, self.coords), f"Invalid shape: {self.shape}"
-                assert self.layout == self.__cal_layout(self.coords, self.shape[0]), f"Invalid layout: {self.layout}"
-                for i in range(self.shape[0]):
-                    assert torch.all(self.coords[self.layout[i], 0] == i), f"The data of batch {i} is not contiguous"
-            except Exception as e:
-                print("Debugging information:")
-                print(f"- Shape: {self.shape}")
-                print(f"- Layout: {self.layout}")
-                print(f"- Scale: {self._scale}")
-                print(f"- Coords: {self.coords}")
-                raise e
+        # if DEBUG:
+        #     try:
+        #         assert self.feats.shape[0] == self.coords.shape[0], (
+        #             f"Invalid feats shape: {self.feats.shape}, coords shape: {self.coords.shape}"
+        #         )
+        #         assert self.shape == self.__cal_shape(self.feats, self.coords), f"Invalid shape: {self.shape}"
+        #         assert self.layout == self.__cal_layout(self.coords, self.shape[0]), f"Invalid layout: {self.layout}"
+        #         for i in range(self.shape[0]):
+        #             assert torch.all(self.coords[self.layout[i], 0] == i), f"The data of batch {i} is not contiguous"
+        #     except Exception as e:
+        #         print("Debugging information:")
+        #         print(f"- Shape: {self.shape}")
+        #         print(f"- Layout: {self.layout}")
+        #         print(f"- Scale: {self._scale}")
+        #         print(f"- Coords: {self.coords}")
+        #         raise e
 
     def __cal_shape(self, feats: torch.Tensor, coords: torch.Tensor) -> torch.Size:
         shape = []
@@ -106,9 +106,12 @@ class SparseTensor:
         layout = [slice((offset[i] - seq_len[i]).item(), offset[i].item()) for i in range(batch_size)]
         return layout
 
+    def __cal_spatial_shape(self, coords):
+        return torch.Size((coords[:, 1:].max(0)[0] + 1).tolist())
+
     @property
     def shape(self) -> torch.Size:
-        return self.__shape
+        return self._shape
 
     @property
     def dim(self) -> int:
@@ -116,7 +119,15 @@ class SparseTensor:
 
     @property
     def layout(self) -> List[slice]:
-        return self.__layout
+        return self._layout
+
+    @property
+    def spatial_shape(self) -> torch.Size:
+        spatial_shape = self.get_spatial_cache("shape")
+        if spatial_shape is None:
+            spatial_shape = self.__cal_spatial_shape(self.coords)
+            self.register_spatial_cache("shape", spatial_shape)
+        return spatial_shape
 
     @property
     def feats(self) -> torch.Tensor:
@@ -227,17 +238,14 @@ class SparseTensor:
             self.data.indices,
             self.data.spatial_shape,
             self.data.batch_size,
-            self.data.grid,
-            self.data.voxel_num,
-            self.data.indice_dict,
         )
         new_data._features = feats
-        new_data.benchmark = self.data.benchmark
-        new_data.benchmark_record = self.data.benchmark_record
-        new_data.thrust_allocator = self.data.thrust_allocator
-        new_data._timer = self.data._timer
-        new_data.force_algo = self.data.force_algo
-        new_data.int8_scale = self.data.int8_scale
+        # new_data.benchmark = self.data.benchmark
+        # new_data.benchmark_record = self.data.benchmark_record
+        # new_data.thrust_allocator = self.data.thrust_allocator
+        # new_data._timer = self.data._timer
+        # new_data.force_algo = self.data.force_algo
+        # new_data.int8_scale = self.data.int8_scale
         if coords is not None:
             new_data.indices = coords
         new_tensor = SparseTensor(
