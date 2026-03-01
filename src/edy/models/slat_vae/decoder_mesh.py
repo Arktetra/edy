@@ -21,38 +21,34 @@ class SparseSubdivideBlock3d(nn.Module):
         out_channels: if specified, the number of output channels.
         num_groups: the number of groups for the group norm.
     """
-    def __init__(
-        self,
-        channels: int,
-        resolution: int,
-        out_channels: Optional[int] = None,
-        num_groups: int = 32
-    ):
+
+    def __init__(self, channels: int, resolution: int, out_channels: Optional[int] = None, num_groups: int = 32):
         super().__init__()
         self.channels = channels
         self.resolution = resolution
         self.out_resolution = resolution * 2
         self.out_channels = out_channels or channels
 
-        self.act_layers = nn.Sequential(
-            sp.SparseGroupNorm32(num_groups, channels),
-            sp.SparseSiLU()
-        )
-        
+        self.act_layers = nn.Sequential(sp.SparseGroupNorm32(num_groups, channels), sp.SparseSiLU())
+
         self.sub = sp.SparseSubdivide()
-        
+
         self.out_layers = nn.Sequential(
             sp.SparseConv3d(channels, self.out_channels, 3, indice_key=f"res_{self.out_resolution}"),
             sp.SparseGroupNorm32(num_groups, self.out_channels),
             sp.SparseSiLU(),
-            zero_module(sp.SparseConv3d(self.out_channels, self.out_channels, 3, indice_key=f"res_{self.out_resolution}")),
+            zero_module(
+                sp.SparseConv3d(self.out_channels, self.out_channels, 3, indice_key=f"res_{self.out_resolution}")
+            ),
         )
-        
+
         if self.out_channels == channels:
             self.skip_connection = nn.Identity()
         else:
-            self.skip_connection = sp.SparseConv3d(channels, self.out_channels, 1, indice_key=f"res_{self.out_resolution}")
-        
+            self.skip_connection = sp.SparseConv3d(
+                channels, self.out_channels, 1, indice_key=f"res_{self.out_resolution}"
+            )
+
     def forward(self, x: sp.SparseTensor) -> sp.SparseTensor:
         """
         Apply the block to a Tensor, conditioned on a timestep embedding.
@@ -68,6 +64,7 @@ class SparseSubdivideBlock3d(nn.Module):
         h = self.out_layers(h)
         h = h + self.skip_connection(x)
         return h
+
 
 class SLatDecoder(SparseTransformerBase):
     def __init__(
@@ -103,19 +100,17 @@ class SLatDecoder(SparseTransformerBase):
         )
         self.resolution = resolution
         self.rep_config = representation_config
-        self.out_channels = self.get_feats_channels(use_color=self.rep_config.get('use_color', False))
-        self.upsample = nn.ModuleList([
-            SparseSubdivideBlock3d(
-                channels=model_channels,
-                resolution=resolution,
-                out_channels=model_channels // 4
-            ),
-            SparseSubdivideBlock3d(
-                channels=model_channels // 4,
-                resolution=resolution * 2,
-                out_channels=model_channels // 8
-            )
-        ])
+        self.out_channels = self.get_feats_channels(use_color=self.rep_config.get("use_color", False))
+        self.upsample = nn.ModuleList(
+            [
+                SparseSubdivideBlock3d(
+                    channels=model_channels, resolution=resolution, out_channels=model_channels // 4
+                ),
+                SparseSubdivideBlock3d(
+                    channels=model_channels // 4, resolution=resolution * 2, out_channels=model_channels // 8
+                ),
+            ]
+        )
         self.out_layer = sp.SparseLinear(model_channels // 8, self.out_channels)
 
         self.initialize_weights()
@@ -124,18 +119,24 @@ class SLatDecoder(SparseTransformerBase):
 
     def get_feats_channels(self, use_color=True):
         LAYOUTS = {
-            'sdf': {'shape': (8, 1), 'size': 8},
-            'deform': {'shape': (8, 3), 'size': 8 * 3},
-            'weights': {'shape': (21,), 'size': 21}
+            "sdf": {"shape": (8, 1), "size": 8},
+            "deform": {"shape": (8, 3), "size": 8 * 3},
+            "weights": {"shape": (21,), "size": 21},
         }
         if use_color:
             # 6 channel color including normal map
-            LAYOUTS['color'] = {'shape': (8, 6,), 'size': 8 * 6}
-        
+            LAYOUTS["color"] = {
+                "shape": (
+                    8,
+                    6,
+                ),
+                "size": 8 * 6,
+            }
+
         start = 0
         for k, v in LAYOUTS.items():
-            v['range'] = (start, start + v['size'])
-            start += v['size']
+            v["range"] = (start, start + v["size"])
+            start += v["size"]
         return start
 
     @staticmethod
@@ -158,9 +159,7 @@ class SLatDecoder(SparseTransformerBase):
             attn_mode="swin",
             window_size=8,
             use_fp16=True,
-            representation_config={
-                "use_color": True
-            }
+            representation_config={"use_color": True},
         )
 
         load_model(model, Path(__file__).parents[3] / ckpt_path, strict=False)
@@ -185,7 +184,7 @@ class SLatDecoder(SparseTransformerBase):
         Convert the torso of the model to float32.
         """
         super().convert_to_fp32()
-        self.upsample.apply(convert_module_to_f32)  
+        self.upsample.apply(convert_module_to_f32)
 
     def forward(self, x: sp.SparseTensor) -> List[MeshExtractResult]:
         h = super().forward(x)
@@ -204,9 +203,11 @@ class MeshExtractor:
     ):
         self.resolution = resolution
         self.rep_config = representation_config
-        self.mesh_extractor = SparseFeaturesToMesh(res=self.resolution*4, use_color=self.rep_config.get('use_color', False))
+        self.mesh_extractor = SparseFeaturesToMesh(
+            res=self.resolution * 4, use_color=self.rep_config.get("use_color", False)
+        )
         self.out_channels = self.mesh_extractor.feats_channels
-    
+
     def to_representation(self, x: sp.SparseTensor) -> List[MeshExtractResult]:
         """
         Convert a batch of network outputs to 3D representations.
