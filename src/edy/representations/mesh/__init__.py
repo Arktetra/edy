@@ -1,1 +1,7 @@
-from .cube2mesh import SparseFeatures2Mesh, MeshExtractResult
+from edy.representations.mesh.cube_to_mesh import SparseFeaturesToMesh, MeshExtractResult
+
+
+__all__ = [
+    "SparseFeaturesToMesh",
+    "MeshExtractResult"
+]
