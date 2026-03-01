@@ -104,7 +104,7 @@ def sparse_windowed_scaled_dot_product_self_attention(
         N = window_size
         qkv_feats = qkv_feats.reshape(B, N, 3, H, C)
 
-        # make a wrapper and call sdpa for this 
+        # make a wrapper and call sdpa for this
         out = flash_attn_qkvpacked_func(qkv_feats)  # [B, N, H, C]
         out = out.reshape(B * N, H, C)  # [M, H, C]
     else:
