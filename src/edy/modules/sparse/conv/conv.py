@@ -18,6 +18,7 @@ class SparseConv3d(nn.Module):
         dilation: int = 1,
         padding: Optional[int] = None,
         bias: bool = True,
+        indice_key: str = None,
     ):
         super(SparseConv3d, self).__init__()
         self.sparse_conv3d_init(in_channels, out_channels, kernel_size, stride, dilation, padding, bias)
@@ -63,14 +64,18 @@ class SparseConv3d(nn.Module):
         neighbor_cache_key = f"SubMConv3d_neighbor_cache_{Kw}x{Kh}x{Kd}_dilation{self.dilation}"
         neighbor_cache = x.get_spatial_cache(neighbor_cache_key)
 
+        # It seems that during the computation of out-block, the neighbor-cache with only 13072
+        # entries is used to compute the convolution for input with 47532 entries, which clearly
+        # requires a recomputation of neighbor-cache.
+
         out, neighbor_cache_ = sparse_submanifold_conv3d(
             x.feats,
             x.coords,
             torch.Size([*x.shape, *x.spatial_shape]),
             self.weight,
             self.bias,
-            neighbor_cache,
-            self.dilation,
+            # neighbor_cache,       # there is bug due to passing a neighbor cache here look line 67.
+            dilation=self.dilation,
         )
 
         if neighbor_cache is None:

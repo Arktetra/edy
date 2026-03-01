@@ -1,4 +1,4 @@
-import flexgemm
+import flex_gemm
 
 SPCONV_ALGO = "auto"  # 'auto', 'implicit_gemm', 'native'
 FLEX_GEMM_ALGO = "masked_implicit_gemm_splitk"
@@ -17,7 +17,7 @@ FLEX_GEMM_HASHMAP_RATIO = 2.0
 
 # __from_env()
 
-flexgemm.ops.spconv.set_algorithm(FLEX_GEMM_ALGO)
-flexgemm.ops.spconv.set_hashmap_ratio(FLEX_GEMM_HASHMAP_RATIO)
+flex_gemm.ops.spconv.set_algorithm(FLEX_GEMM_ALGO)
+flex_gemm.ops.spconv.set_hashmap_ratio(FLEX_GEMM_HASHMAP_RATIO)
 
 print(f"[Conv] using backend {FLEX_GEMM_ALGO}")
