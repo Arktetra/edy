@@ -4,11 +4,16 @@ from torch.nn.attention.varlen import varlen_attn
 import torch
 
 from edy.modules.sparse.tensor import SparseTensor
-from edy.modules.sparse.attention.utils import flash_attn_varlen_func, flash_attn_varlen_kvpacked_func, flash_attn_varlen_qkvpacked_func
+from edy.modules.sparse.attention.utils import (
+    flash_attn_varlen_func,
+    flash_attn_varlen_kvpacked_func,
+    flash_attn_varlen_qkvpacked_func,
+)
 
 __all__ = [
     "sparse_scaled_dot_product_attention",
 ]
+
 
 @overload
 def sparse_scaled_dot_product_attention(qkv: SparseTensor) -> SparseTensor:
