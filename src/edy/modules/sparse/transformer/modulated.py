@@ -4,7 +4,7 @@ import torch.nn as nn
 
 from edy.modules.sparse.tensor import SparseTensor
 from edy.modules.sparse.attention import SparseMultiHeadAttention, SerializeMode
-from edy.modules.sparse.norm import SparseLayerNorm32
+from edy.modules.norm import LayerNorm32
 from edy.modules.sparse.transformer.blocks import SparseFFN
 
 
@@ -32,8 +32,8 @@ class ModulatedSparseTransformerBlock(nn.Module):
         super().__init__()
         self.use_checkpoint = use_checkpoint
         self.share_mod = share_mod
-        self.norm1 = SparseLayerNorm32(channels, elementwise_affine=False, eps=1e-6)
-        self.norm2 = SparseLayerNorm32(channels, elementwise_affine=False, eps=1e-6)
+        self.norm1 = LayerNorm32(channels, elementwise_affine=False, eps=1e-6)
+        self.norm2 = LayerNorm32(channels, elementwise_affine=False, eps=1e-6)
         self.attn = SparseMultiHeadAttention(
             channels,
             num_heads=num_heads,
@@ -103,9 +103,9 @@ class ModulatedSparseTransformerCrossBlock(nn.Module):
         super().__init__()
         self.use_checkpoint = use_checkpoint
         self.share_mod = share_mod
-        self.norm1 = SparseLayerNorm32(channels, elementwise_affine=False, eps=1e-6)
-        self.norm2 = SparseLayerNorm32(channels, elementwise_affine=True, eps=1e-6)
-        self.norm3 = SparseLayerNorm32(channels, elementwise_affine=False, eps=1e-6)
+        self.norm1 = LayerNorm32(channels, elementwise_affine=False, eps=1e-6)
+        self.norm2 = LayerNorm32(channels, elementwise_affine=True, eps=1e-6)
+        self.norm3 = LayerNorm32(channels, elementwise_affine=False, eps=1e-6)
         self.self_attn = SparseMultiHeadAttention(
             channels,
             num_heads=num_heads,
