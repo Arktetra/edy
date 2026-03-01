@@ -3,6 +3,7 @@ import torch.nn.functional as F
 
 from torchvision.transforms import v2
 from PIL import Image
+from typing import Union
 
 from vggt.models.vggt import VGGT
 # from vggt.utils.load_fn import load_and_preprocess_images
@@ -106,6 +107,13 @@ class FeatureEncoder:
         scene_vggt_feature = scene_vggt_feature.expand(cond.shape[0], -1, -1)
         cond = torch.cat([cond, scene_vggt_feature], dim=1)
 
+        neg_cond = torch.zeros_like(cond)
+
+        return {"cond": cond, "neg_cond": neg_cond}
+
+    @torch.no_grad()
+    def get_cond_dinov2(self, image: Union[torch.Tensor, list[Image.Image]]) -> dict:
+        cond = self.encode_dinov2_features(image)
         neg_cond = torch.zeros_like(cond)
 
         return {"cond": cond, "neg_cond": neg_cond}
