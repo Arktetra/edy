@@ -1,17 +1,150 @@
+import io
 import numpy as np
 import torch
+import trimesh
 import utils3d
 
+from contextlib import redirect_stdout
 from scipy.spatial.transform import Rotation as R
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
+from edy.models.slat_vae.decoder_mesh import SLatDecoder
+from edy.models.structured_latent_flow import SLatFlowModel
 from edy.pipelines.base import Pipeline
 from edy import samplers
-from edy.feature_encoder import FeatureEncoder
 from edy.models.sparse_structure_flow import SparseStructureFlowModel
 from edy.models.sparse_structure_vae import SparseStructureDecoder
 from edy.renderers.octree_renderer import OctreeRenderer
 from edy.representations import Octree
+from edy.modules import sparse as sp
+# from edy.utils import postprocessing_utils
+
+
+def transform_from_local(local_pos, local_euler, ref_pos, ref_euler):
+    # Convert euler angles to rotation matrices
+    if len(ref_euler) == 4:
+        ref_euler = R.from_quat(ref_euler, scalar_first=True).as_euler("xyz", degrees=True)
+    if len(local_euler) == 4:
+        local_euler = R.from_quat(local_euler, scalar_first=True).as_euler("xyz", degrees=True)
+
+    rot_ref = R.from_euler("xyz", ref_euler, degrees=True).as_matrix()
+    local_rot = R.from_euler("xyz", local_euler, degrees=True).as_matrix()
+
+    # Compute global position
+    global_pos = np.dot(rot_ref, local_pos) + np.array(ref_pos)
+
+    # Compute global rotation
+    global_rot = np.dot(rot_ref, local_rot)
+    global_euler = R.from_matrix(global_rot).as_quat(scalar_first=True)
+
+    return tuple(global_pos), tuple(global_euler)
+
+
+def decode_slat(decoder: SLatDecoder, slat: sp.SparseTensor) -> dict:
+    """
+    Decode the structured latents into mesh.
+
+    Args:
+        decoder (SLatMeshDecoder): the structured latents mesh decoder.
+        slat (sp.SparseTensor): the structured latents.
+
+    Returns:
+        (dict): the decoded structured latents.
+    """
+    return decoder(slat)
+
+
+# def convert_to_glb(
+#     scene,
+#     positions,
+#     resorted_indices: List[int] = None,
+#     simplify: float = 0.95,
+#     texture_size: int = 1024
+# ):
+#     pos_query = (0.0, 0.0, 0.0)
+#     quat_query = R.from_euler('xyz', (90, 0, 0), degrees=True).as_quat(scalar_first=True)
+
+#     local_pos, local_quat, local_scale = [], [], []
+
+#     for i in range(1, len(positions)):
+#         local_pos.append(np.array(positions[i][0:3]))
+#         local_quat.append(np.array(positions[i][3:7]))
+#         local_scale.append(float(positions[i][7]))
+
+#     for i in range(len(local_pos)):
+#         pos = transform_from_local(local_pos[i], local_quat[i], pos_query, quat_query)
+#         local_pos[i] = pos[0]
+#         local_quat[i] = pos[1]
+
+#     positions = np.array([pos_query] + local_pos)
+#     quats = np.array([quat_query] + local_quat)
+#     scales = np.array([1.0] + local_scale)
+
+#     trimeshes = []
+#     for i in range(len(outputs)):
+#         with redirect_stdout(io.StringIO()):  # Redirect stdout to a string buffer
+#             glb = postprocessing_utils.to_glb(
+#                 outputs[i]['gaussian'][0],
+#                 outputs[i]['mesh'][0],
+#                 # Optional parameters
+#                 simplify=simplify,          # Ratio of triangles to remove in the simplification process
+#                 texture_size=texture_size,      # Size of the texture used for the GLB
+#             )
+#         trimeshes.append(glb)
+
+#     # Compose the output meshes into a single scene
+#     scene = trimesh.Scene()
+#     # Add each mesh to the scene with the appropriate transformation
+#     if resorted_indices is None:
+#         resorted_indices = range(len(trimeshes))
+
+#     current_transform = np.eye(4)
+#     for i in resorted_indices:
+#         rmat = R.from_quat(quats[i], scalar_first=True).as_matrix() * scales[i]
+#         transform = np.eye(4)
+#         transform[:3, :3] = rmat
+#         transform[:3, 3] = positions[i]
+#         scene.add_geometry(trimeshes[i], transform=transform)
+#         if i == resorted_indices[0]:
+#             current_transform = transform
+
+#     # Move the query asset to the origin with no rotation
+#     R_matrix = current_transform[:3, :3]
+#     t = current_transform[:3, 3]
+#     T = np.eye(4)
+#     T[:3, :3] = R_matrix.T
+#     T[:3, 3] = -np.dot(R_matrix.T, t)
+#     scene.apply_transform(T)
+
+#     # Normalize the scene to fit within (-1, -1, -1) and (1, 1, 1) with a margin.
+#     bounds = scene.bounds
+#     scene_min, scene_max = bounds
+#     scene_center = (scene_min + scene_max) / 2.0
+#     extents = scene_max - scene_min
+#     max_extent = extents.max()
+
+#     # Define a margin (e.g., 2% margin from each side)
+#     margin = 0.02
+#     target_half_size = 1 - margin
+#     scale_factor = target_half_size * 2 / max_extent
+#     normalize_transform = trimesh.transformations.compose_matrix(
+#         translate=-scene_center,
+#         scale=[scale_factor, scale_factor, scale_factor]
+#     )
+
+#     scene.apply_transform(normalize_transform)
+
+#     positions = [positions[i] for i in resorted_indices]
+#     positions = np.array(positions)
+#     trimeshes = [trimeshes[i] for i in resorted_indices]
+
+#     outputs = {
+#         'scene': scene,
+#         'positions': positions,
+#         'assets': trimeshes,
+#     }
+
+#     return outputs
 
 
 class ImageToScenePipeline(Pipeline):
@@ -25,6 +158,7 @@ class ImageToScenePipeline(Pipeline):
     def __init__(
         self,
         ss_flow_model: Optional[SparseStructureFlowModel] = None,
+        slat_flow_model: Optional[SLatFlowModel] = None,
         sparse_structure_sampler: Optional[samplers.Sampler] = None,
         slat_sampler: Optional[samplers.Sampler] = None,
         slat_normalization: Optional[dict] = None,
@@ -36,7 +170,10 @@ class ImageToScenePipeline(Pipeline):
             self.sparse_structure_sampler = sparse_structure_sampler
         else:
             self.sparse_structure_sampler = samplers.FlowEulerGuidanceIntervalSamplerVGGT(sigma_min=1e-5)
-        self.slat_sampler = slat_sampler
+        if slat_sampler is not None:
+            self.slat_sampler = slat_sampler
+        else:
+            self.slat_sampler = samplers.FlowEulerGuidanceIntervalSampler(sigma_min=1e-5)
         self.sparse_structure_sampler_params = {}
         self.slat_sampler_params = {}
         self.slat_normalization = slat_normalization
@@ -48,14 +185,46 @@ class ImageToScenePipeline(Pipeline):
         # self.ss_flow_model = SparseStructureFlowModel.from_pretrained(
         #     transformer_block_type="CrossOnly", use_checkpoint=False, device=device
         # )
-        if ss_flow_model is None:
-            self.ss_flow_model = SparseStructureFlowModel.from_pretrained(
-                transformer_block_type="CrossOnly", use_checkpoint=False, device=device
-            )
-        else:
-            self.ss_flow_model = ss_flow_model
+        # if ss_flow_model is None:
+        #     self.ss_flow_model = SparseStructureFlowModel.from_pretrained(
+        #         transformer_block_type="CrossOnly", use_checkpoint=False, device=device
+        #     )
+        # else:
+        #     self.ss_flow_model = ss_flow_model
+        # if slat_flow_model is None:
+        #     self.slat_flow_model = SLatFlowModel.from_pretrained().to(device)
+        # else:
+        #     self.slat_flow_model = slat_flow_model.to(device)
+        assert ss_flow_model is not None or slat_flow_model is not None, (
+            "Either a sparse structure or structured latent flow model must be given."
+        )
+        self.ss_flow_model = ss_flow_model
+        self.slat_flow_model = slat_flow_model
         self.ss_decoder = SparseStructureDecoder.from_pretrained(device=device).to(device)
         self.device = device
+
+        self.slat_normalization = {
+            "mean": [
+                -2.1687545776367188,
+                -0.004347046371549368,
+                -0.13352349400520325,
+                -0.08418072760105133,
+                -0.5271206498146057,
+                0.7238689064979553,
+                -1.1414450407028198,
+                1.2039363384246826,
+            ],
+            "std": [
+                2.377650737762451,
+                2.386378288269043,
+                2.124418020248413,
+                2.1748552322387695,
+                2.663944721221924,
+                2.371192216873169,
+                2.6217446327209473,
+                2.684523105621338,
+            ],
+        }
 
     @staticmethod
     def from_pretrained(path) -> "ImageToScenePipeline":
@@ -302,3 +471,20 @@ class ImageToScenePipeline(Pipeline):
             images, scene_images = self.visualize(z_s, positions, batch_size)
 
         return coords, positions, images, scene_images, ret
+
+    def sample_slat(self, cond: dict, coords: torch.Tensor, sampler_params: dict = {}) -> sp.SparseTensor:
+        noise = sp.SparseTensor(
+            feats=torch.randn(coords.shape[0], self.slat_flow_model.in_channels).to(
+                self.device, dtype=cond["cond"].dtype
+            ),
+            coords=coords,
+        )
+
+        sampler_params = {**sampler_params}
+        slat = self.slat_sampler.sample(self.slat_flow_model, noise, **cond, **sampler_params, verbose=True).samples
+
+        std = torch.tensor(self.slat_normalization["std"])[None].to(slat.device)
+        mean = torch.tensor(self.slat_normalization["mean"])[None].to(slat.device)
+        slat = slat * std + mean
+
+        return slat
