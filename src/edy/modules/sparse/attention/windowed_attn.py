@@ -1,9 +1,9 @@
 from typing import List, Tuple, Union
-import flash_attn
 import torch
 import math
 
 from edy.modules.sparse.tensor import SparseTensor
+from edy.modules.sparse.attention.utils import flash_attn_varlen_qkvpacked_func
 
 
 __all__ = [
@@ -104,13 +104,13 @@ def sparse_windowed_scaled_dot_product_self_attention(
         N = window_size
         qkv_feats = qkv_feats.reshape(B, N, 3, H, C)
 
-        out = flash_attn.flash_attn_qkvpacked_func(qkv_feats)  # [B, N, H, C]
+        out = flash_attn_qkvpacked_func(qkv_feats)  # [B, N, H, C]
         out = out.reshape(B * N, H, C)  # [M, H, C]
     else:
         cu_seqlens = (
             torch.cat([torch.tensor([0]), torch.cumsum(torch.tensor(seq_lens), dim=0)], dim=0).to(qkv.device).int()
         )
-        out = flash_attn.flash_attn_varlen_qkvpacked_func(qkv_feats, cu_seqlens, max(seq_lens))  # [M, H, C]
+        out = flash_attn_varlen_qkvpacked_func(qkv_feats, cu_seqlens, max(seq_lens))  # [M, H, C]
 
     out = out[bwd_indices]  # [T, H, C]
 
