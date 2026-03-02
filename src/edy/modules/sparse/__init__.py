@@ -1,4 +1,4 @@
-from edy.modules.sparse.conv.conv import SparseConv3d
+# from edy.modules.sparse.conv.conv import SparseConv3d
 from edy.modules.sparse.linear import SparseLinear
 from edy.modules.sparse.spatial import SparseDownSample, SparseUpSample, SparseSubdivide
 from edy.modules.sparse.tensor import SparseTensor

@@ -13,6 +13,7 @@ from edy.modules import sparse as sp
 from edy.modules.transformer.modulated import AbsolutePositionEmbedder
 from edy.modules.utils import convert_module_to_f16, convert_module_to_f32, zero_module
 from edy.modules.sparse.transformer import ModulatedSparseTransformerCrossBlock
+from edy.modules.sparse.conv.conv import SparseConv3d
 
 
 class SparseResBlock3d(nn.Module):
@@ -40,9 +41,9 @@ class SparseResBlock3d(nn.Module):
 
         self.norm1 = LayerNorm32(channels, elementwise_affine=True, eps=1e-6)
         self.norm2 = LayerNorm32(self.out_channels, elementwise_affine=False, eps=1e-6)
-        self.conv1 = sp.SparseConv3d(in_channels=self.channels, out_channels=self.out_channels, kernel_size=3)
+        self.conv1 = SparseConv3d(in_channels=self.channels, out_channels=self.out_channels, kernel_size=3)
         self.conv2 = zero_module(
-            sp.SparseConv3d(in_channels=self.out_channels, out_channels=self.out_channels, kernel_size=3)
+            SparseConv3d(in_channels=self.out_channels, out_channels=self.out_channels, kernel_size=3)
         )
 
         self.skip_connection = (

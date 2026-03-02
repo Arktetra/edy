@@ -6,6 +6,7 @@ import huggingface_hub
 import torch
 import torch.nn as nn
 
+from edy.modules.sparse.conv.conv import SparseConv3d
 from edy.modules.utils import zero_module, convert_module_to_f16, convert_module_to_f32
 from edy.modules import sparse as sp
 from edy.models.slat_vae.base import SparseTransformerBase
@@ -35,20 +36,16 @@ class SparseSubdivideBlock3d(nn.Module):
         self.sub = sp.SparseSubdivide()
 
         self.out_layers = nn.Sequential(
-            sp.SparseConv3d(channels, self.out_channels, 3, indice_key=f"res_{self.out_resolution}"),
+            SparseConv3d(channels, self.out_channels, 3, indice_key=f"res_{self.out_resolution}"),
             sp.SparseGroupNorm32(num_groups, self.out_channels),
             sp.SparseSiLU(),
-            zero_module(
-                sp.SparseConv3d(self.out_channels, self.out_channels, 3, indice_key=f"res_{self.out_resolution}")
-            ),
+            zero_module(SparseConv3d(self.out_channels, self.out_channels, 3, indice_key=f"res_{self.out_resolution}")),
         )
 
         if self.out_channels == channels:
             self.skip_connection = nn.Identity()
         else:
-            self.skip_connection = sp.SparseConv3d(
-                channels, self.out_channels, 1, indice_key=f"res_{self.out_resolution}"
-            )
+            self.skip_connection = SparseConv3d(channels, self.out_channels, 1, indice_key=f"res_{self.out_resolution}")
 
     def forward(self, x: sp.SparseTensor) -> sp.SparseTensor:
         """

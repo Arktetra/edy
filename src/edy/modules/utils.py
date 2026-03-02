@@ -1,6 +1,7 @@
 import torch.nn as nn
 
 from edy.modules import sparse as sp
+from edy.modules.sparse.conv.conv import SparseConv3d
 # from ..modules import sparse as sp
 
 FP16_MODULES = (
@@ -11,7 +12,7 @@ FP16_MODULES = (
     nn.ConvTranspose2d,
     nn.ConvTranspose3d,
     nn.Linear,
-    sp.SparseConv3d,
+    SparseConv3d,
     sp.SparseLinear,
 )
 
