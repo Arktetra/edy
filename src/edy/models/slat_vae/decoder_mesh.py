@@ -1,6 +1,6 @@
 from pathlib import Path
 from safetensors.torch import load_model
-from typing import Optional, Literal, List
+from typing import Optional, Literal, List, Union
 
 import huggingface_hub
 import torch
@@ -190,7 +190,7 @@ class SLatDecoder(SparseTransformerBase):
     def forward(self, x: sp.SparseTensor) -> List[MeshExtractResult]:
         h = super().forward(x)
         for block in self.upsample:
-            print(h.shape, h.feats.shape)
+            # print(h.shape, h.feats.shape)
             h = block(h)
         h = h.type(x.dtype)
         return self.out_layer(h)
@@ -210,7 +210,7 @@ class MeshExtractor:
         self.out_channels = self.mesh_extractor.feats_channels
 
     @torch.no_grad()
-    def to_representation(self, x: sp.SparseTensor) -> List[MeshExtractResult]:
+    def to_representation(self, x: Union[sp.SparseTensor, List[sp.SparseTensor]]) -> List[MeshExtractResult]:
         """
         Convert a batch of network outputs to 3D representations.
 
@@ -221,7 +221,11 @@ class MeshExtractor:
             list of representations
         """
         ret = []
-        for i in range(x.shape[0]):
+        if isinstance(x, sp.SparseTensor):
+            num_objs = x.shape[0]
+        else:
+            num_objs = len(x)
+        for i in range(num_objs):
             mesh = self.mesh_extractor(x[i])
             ret.append(mesh)
         return ret
