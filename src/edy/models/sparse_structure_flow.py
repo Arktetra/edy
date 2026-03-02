@@ -245,7 +245,7 @@ class SparseStructureFlowModel(nn.Module):
                 torch.load(Path(__file__).parents[3] / ckpt_path, map_location=device, weights_only=True)
             )
 
-            return model
+            return model.to(device)
         elif transformer_block_type == "CrossOnly":
             ckpt_path = "ss-flow-model.pt"
             huggingface_hub.hf_hub_download(
